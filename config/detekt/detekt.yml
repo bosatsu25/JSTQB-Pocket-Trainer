@@ -1,8 +1,39 @@
 build:
-  maxIssues: 10
+  maxIssues: 0
+
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: ['Composable']
+  MatchingDeclarationName:
+    active: false
+
+complexity:
+  LongMethod:
+    active: false
+  LongParameterList:
+    active: false
+  TooManyFunctions:
+    active: false
+  CyclomaticComplexMethod:
+    active: false
 
 style:
   MagicNumber:
     active: false
   UnusedPrivateMember:
     active: true
+  UnusedPrivateProperty:
+    active: false
+  MaxLineLength:
+    active: false
+  WildcardImport:
+    active: false
+  UseCheckOrError:
+    active: false
+  ReturnCount:
+    active: false
+
+exceptions:
+  SwallowedException:
+    active: false

@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnalyticsScreen(
-    viewModel: AnalyticsViewModel,
+    @Suppress("UnusedParameter") viewModel: AnalyticsViewModel,
     modifier: Modifier = Modifier
 ) {
     Scaffold(

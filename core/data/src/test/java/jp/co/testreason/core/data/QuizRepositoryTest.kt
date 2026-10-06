@@ -1,51 +1,60 @@
 package jp.co.testreason.core.data
 
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
 import jp.co.testreason.core.database.*
 import jp.co.testreason.core.domain.SpacedReviewEngine
 import jp.co.testreason.core.model.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class QuizRepositoryTest {
 
+    private lateinit var db: TestReasonDatabase
     private lateinit var quizRepository: QuizRepository
-    private lateinit var fakeQuestionDao: FakeQuestionDao
-    private lateinit var fakeAttemptDao: FakeAttemptDao
-    private lateinit var fakeSessionDao: FakeSessionDao
-    private lateinit var fakeReviewScheduleDao: FakeReviewScheduleDao
-    private lateinit var fakeQuestionCompletionDao: FakeQuestionCompletionDao
     private lateinit var fakeMasteryRepository: FakeMasteryRepository
     private lateinit var testTimeProvider: MutableTimeProvider
     private lateinit var spacedReviewEngine: SpacedReviewEngine
 
     @Before
     fun setUp() {
-        fakeQuestionDao = FakeQuestionDao()
-        fakeAttemptDao = FakeAttemptDao()
-        fakeSessionDao = FakeSessionDao()
-        fakeReviewScheduleDao = FakeReviewScheduleDao()
-        fakeQuestionCompletionDao = FakeQuestionCompletionDao()
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        db = Room.inMemoryDatabaseBuilder(
+            context,
+            TestReasonDatabase::class.java
+        ).allowMainThreadQueries().build()
+
         fakeMasteryRepository = FakeMasteryRepository()
         testTimeProvider = MutableTimeProvider(1000000L)
         spacedReviewEngine = SpacedReviewEngine(testTimeProvider)
 
         quizRepository = QuizRepositoryImpl(
-            questionDao = fakeQuestionDao,
-            attemptDao = fakeAttemptDao,
-            sessionDao = fakeSessionDao,
-            reviewScheduleDao = fakeReviewScheduleDao,
-            questionCompletionDao = fakeQuestionCompletionDao,
+            db = db,
+            questionDao = db.questionDao(),
+            attemptDao = db.attemptDao(),
+            sessionDao = db.sessionDao(),
+            reviewScheduleDao = db.reviewScheduleDao(),
+            questionCompletionDao = db.questionCompletionDao(),
             masteryRepository = fakeMasteryRepository,
             spacedReviewEngine = spacedReviewEngine,
             timeProvider = testTimeProvider
         )
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
     }
 
     @Test
@@ -60,6 +69,7 @@ class QuizRepositoryTest {
 
     @Test
     fun finalizeAttempt_resubmissionPreservesFirstAnswerAndChoice() = runTest {
+        quizRepository.seedInitialQuestionsIfEmpty()
         val initialAttempt = Attempt(
             id = "att1",
             sessionId = "s1",
@@ -96,6 +106,7 @@ class QuizRepositoryTest {
 
     @Test
     fun observeDueReviewQuestions_includesDueAndNow_excludesFutureAndUnseen() = runTest {
+        quizRepository.seedInitialQuestionsIfEmpty()
         // Current time: 1000000L
         val dueSchedule = ReviewScheduleEntity(
             questionId = "q_fl_1_1_1",
@@ -115,11 +126,11 @@ class QuizRepositoryTest {
             lastAttemptAt = 100000L,
             intervalDays = 7
         )
-        // q_fl_2_2_1 has no schedule in fakeReviewScheduleDao (q_unseen)
+        // q_fl_2_2_1 has no schedule record (q_unseen)
 
-        fakeReviewScheduleDao.insertOrUpdateSchedule(dueSchedule)
-        fakeReviewScheduleDao.insertOrUpdateSchedule(nowSchedule)
-        fakeReviewScheduleDao.insertOrUpdateSchedule(futureSchedule)
+        db.reviewScheduleDao().insertOrUpdateSchedule(dueSchedule)
+        db.reviewScheduleDao().insertOrUpdateSchedule(nowSchedule)
+        db.reviewScheduleDao().insertOrUpdateSchedule(futureSchedule)
 
         val dueQuestions = quizRepository.observeDueReviewQuestions().first()
         assertEquals(2, dueQuestions.size)
@@ -128,7 +139,6 @@ class QuizRepositoryTest {
         assertFalse(dueQuestions.any { it.id == "q_fl_2_1_1" }) // Future excluded!
         assertFalse(dueQuestions.any { it.id == "q_fl_2_2_1" }) // Unseen excluded!
 
-        // Test createDueReviewSession uses the exact dueQuestions
         val dueSession = quizRepository.createDueReviewSession()
         assertEquals(2, dueSession.questionIds.size)
         assertTrue(dueSession.questionIds.contains("q_fl_1_1_1"))
@@ -166,73 +176,6 @@ class QuizRepositoryTest {
 
 class MutableTimeProvider(var timeMs: Long) : TimeProvider {
     override fun currentTimeMillis(): Long = timeMs
-}
-
-class FakeQuestionDao : QuestionDao {
-    private val questions = SampleQuestions.getInitialQuestions().map { it.toEntity() }.toMutableList()
-
-    override fun getAllQuestions() = flowOf(questions)
-    override suspend fun getQuestionById(id: String) = questions.find { it.id == id }
-    override fun getQuestionsByLo(loId: String) = flowOf(questions.filter { it.learningObjectiveId == loId })
-    override suspend fun getRandomQuestions(limit: Int) = questions.take(limit)
-    override suspend fun insertQuestions(questions: List<QuestionEntity>) {
-        this.questions.addAll(questions)
-    }
-}
-
-class FakeAttemptDao : AttemptDao {
-    private val attempts = mutableListOf<AttemptEntity>()
-    override fun getAttemptsBySession(sessionId: String) = flowOf(attempts.filter { it.sessionId == sessionId })
-    override fun getAttemptsByQuestion(questionId: String) = flowOf(attempts.filter { it.questionId == questionId })
-    override suspend fun getAttempt(sessionId: String, questionId: String) =
-        attempts.find { it.sessionId == sessionId && it.questionId == questionId }
-    override fun getAllAttempts() = flowOf(attempts)
-    override suspend fun insertAttemptIgnore(attempt: AttemptEntity): Long {
-        val exists = attempts.any { it.sessionId == attempt.sessionId && it.questionId == attempt.questionId }
-        if (exists) return -1L
-        attempts.add(attempt)
-        return attempts.size.toLong()
-    }
-    override suspend fun updateMistakeReasonOnly(sessionId: String, questionId: String, mistakeReason: MistakeReason) {
-        val index = attempts.indexOfFirst { it.sessionId == sessionId && it.questionId == questionId }
-        if (index >= 0) {
-            attempts[index] = attempts[index].copy(mistakeReason = mistakeReason)
-        }
-    }
-}
-
-class FakeSessionDao : SessionDao {
-    private var session: SessionEntity? = null
-    override suspend fun getSessionById(id: String) = session?.takeIf { it.id == id }
-    override fun getActiveSession() = flowOf(session?.takeIf { !it.isFinalized })
-    override suspend fun insertOrUpdateSession(session: SessionEntity) {
-        this.session = session
-    }
-}
-
-class FakeReviewScheduleDao : ReviewScheduleDao {
-    private val schedules = mutableMapOf<String, ReviewScheduleEntity>()
-
-    override fun getDueReviewSchedules(now: Long) = flowOf(schedules.values.filter { it.nextReviewAt <= now })
-    override suspend fun getSchedule(questionId: String) = schedules[questionId]
-    override fun getAllSchedules() = flowOf(schedules.values.toList())
-    override suspend fun insertOrUpdateSchedule(schedule: ReviewScheduleEntity) {
-        schedules[schedule.questionId] = schedule
-    }
-}
-
-class FakeQuestionCompletionDao : QuestionCompletionDao {
-    private val completions = mutableListOf<QuestionCompletionEntity>()
-
-    override suspend fun getCompletion(sessionId: String, questionId: String): QuestionCompletionEntity? =
-        completions.find { it.sessionId == sessionId && it.questionId == questionId }
-
-    override suspend fun insertCompletionIgnore(completion: QuestionCompletionEntity): Long {
-        val exists = completions.any { it.sessionId == completion.sessionId && it.questionId == completion.questionId }
-        if (exists) return -1L
-        completions.add(completion)
-        return completions.size.toLong()
-    }
 }
 
 class FakeMasteryRepository : MasteryRepository {

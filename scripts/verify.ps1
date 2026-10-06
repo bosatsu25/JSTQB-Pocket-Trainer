@@ -3,28 +3,58 @@ $ErrorActionPreference = "Stop"
 
 Remove-Item env:ANDROID_PREFS_ROOT -ErrorAction SilentlyContinue
 
-# Auto-detect JAVA_HOME if not set or invalid
+# Dynamic JAVA_HOME resolution
 if (-not $env:JAVA_HOME -or -not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
-    $possibleJdks = @(
-        "C:\Program Files\Java\jdk-23",
+    $searchPaths = @(
+        "C:\Program Files\Java\jdk*",
+        "C:\Program Files\Eclipse Adoptium\jdk*",
+        "$env:USERPROFILE\.jdks\*",
         "C:\Program Files\Android\Android Studio\jbr"
     )
-    foreach ($jdk in $possibleJdks) {
-        if (Test-Path "$jdk\bin\java.exe") {
-            $env:JAVA_HOME = $jdk
+    foreach ($pathPattern in $searchPaths) {
+        $found = Get-Item $pathPattern -ErrorAction SilentlyContinue | Where-Object { Test-Path "$_\bin\java.exe" } | Select-Object -First 1
+        if ($found) {
+            $env:JAVA_HOME = $found.FullName
             break
         }
     }
 }
 
+if (-not $env:JAVA_HOME -or -not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
+    $javaCmd = Get-Command java -ErrorAction SilentlyContinue
+    if ($javaCmd) {
+        $javaBinDir = Split-Path -Path $javaCmd.Source -Parent
+        $env:JAVA_HOME = Split-Path -Path $javaBinDir -Parent
+    }
+}
+
+# Dynamic Android SDK resolution
 if (-not $env:ANDROID_HOME -or -not (Test-Path $env:ANDROID_HOME)) {
-    $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+    if (Test-Path "local.properties") {
+        $localProps = Get-Content "local.properties" | Select-String "sdk.dir"
+        if ($localProps) {
+            $env:ANDROID_HOME = ($localProps -split "=")[1].Trim().Replace("\\", "\")
+        }
+    }
+    if (-not $env:ANDROID_HOME -and (Test-Path "$env:LOCALAPPDATA\Android\Sdk")) {
+        $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+    }
+}
+
+if (-not $env:JAVA_HOME -or -not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
+    Write-Error "JAVA_HOME could not be resolved! Please set JAVA_HOME environment variable."
+    exit 1
+}
+
+if (-not $env:ANDROID_HOME -or -not (Test-Path $env:ANDROID_HOME)) {
+    Write-Error "ANDROID_HOME could not be resolved! Please set ANDROID_HOME environment variable."
+    exit 1
 }
 
 Write-Host "Using JAVA_HOME=$env:JAVA_HOME"
 Write-Host "Using ANDROID_HOME=$env:ANDROID_HOME"
 
-# Clean old XML test results prior to execution
+# Clean old test results prior to running tests
 Get-ChildItem -Path "." -Recurse -Filter "TEST-*.xml" | Remove-Item -Force -ErrorAction SilentlyContinue
 
 Write-Host "=========================================="
@@ -38,7 +68,7 @@ if ($testExitCode -ne 0) {
     exit $testExitCode
 }
 
-# Parse test XML reports to count actual executed unit tests from CURRENT run
+# Parse test XML reports from CURRENT test run only
 $testFiles = Get-ChildItem -Path "." -Recurse -Filter "TEST-*.xml"
 $totalTests = 0
 $totalFailures = 0
@@ -62,6 +92,11 @@ if ($totalTests -eq 0) {
     exit 1
 }
 
+if ($totalSkipped -ge $totalTests) {
+    Write-Error "All unit tests were skipped!"
+    exit 1
+}
+
 if ($totalFailures -gt 0) {
     Write-Error "$totalFailures unit test(s) failed!"
     exit 1
@@ -79,7 +114,7 @@ if ($lintExitCode -ne 0) {
 }
 
 Write-Host "=========================================="
-Write-Host "3. Running Detekt Static Analysis"
+Write-Host "3. Running Detekt Static Analysis Across Modules"
 Write-Host "=========================================="
 cmd /c "gradlew.bat detekt --console=plain"
 $detektExitCode = $LASTEXITCODE

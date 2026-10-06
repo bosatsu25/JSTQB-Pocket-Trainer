@@ -1,5 +1,6 @@
 package jp.co.testreason.core.data
 
+import androidx.room.withTransaction
 import jp.co.testreason.core.database.*
 import jp.co.testreason.core.domain.SpacedReviewEngine
 import jp.co.testreason.core.model.*
@@ -31,6 +32,7 @@ interface QuizRepository {
 
 @Singleton
 class QuizRepositoryImpl @Inject constructor(
+    private val db: TestReasonDatabase,
     private val questionDao: QuestionDao,
     private val attemptDao: AttemptDao,
     private val sessionDao: SessionDao,
@@ -120,13 +122,16 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun finalizeAttempt(attempt: Attempt): Boolean {
-        val insertedRowId = attemptDao.insertAttemptIgnore(attempt.toEntity())
-        if (insertedRowId > 0) {
-            val schedule = spacedReviewEngine.calculateSchedule(attempt)
-            reviewScheduleDao.insertOrUpdateSchedule(schedule.toEntity())
-            return true
+        return db.withTransaction {
+            val insertedRowId = attemptDao.insertAttemptIgnore(attempt.toEntity())
+            if (insertedRowId > 0) {
+                val schedule = spacedReviewEngine.calculateSchedule(attempt)
+                reviewScheduleDao.insertOrUpdateSchedule(schedule.toEntity())
+                true
+            } else {
+                false
+            }
         }
-        return false
     }
 
     override suspend fun updateMistakeReason(sessionId: String, questionId: String, mistakeReason: MistakeReason) {
@@ -163,38 +168,40 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun completeQuestion(sessionId: String, questionId: String): QuizSession? {
-        val session = sessionDao.getSessionById(sessionId) ?: return null
-        val currentQIndex = session.questionIds.indexOf(questionId)
-        if (currentQIndex < 0) return session.toDomain()
+        return db.withTransaction {
+            val session = sessionDao.getSessionById(sessionId) ?: return@withTransaction null
+            val currentQIndex = session.questionIds.indexOf(questionId)
+            if (currentQIndex < 0) return@withTransaction session.toDomain()
 
-        val completion = QuestionCompletionEntity(
-            sessionId = sessionId,
-            questionId = questionId,
-            completedAt = timeProvider.currentTimeMillis()
-        )
-        val isFirstCompletion = questionCompletionDao.insertCompletionIgnore(completion) > 0
-
-        if (isFirstCompletion) {
-            val question = questionDao.getQuestionById(questionId)
-            val attempt = attemptDao.getAttempt(sessionId, questionId)
-
-            if (question != null && attempt != null) {
-                masteryRepository.updateMastery(question.learningObjectiveId, attempt.isCorrect)
-            }
-
-            val nextIndex = maxOf(session.currentQuestionIndex, currentQIndex + 1)
-            val isFinalized = nextIndex >= session.questionIds.size
-
-            val updated = session.copy(
-                currentQuestionIndex = nextIndex,
-                isFinalized = isFinalized || session.isFinalized,
-                completedAt = if (isFinalized || session.isFinalized) (session.completedAt ?: timeProvider.currentTimeMillis()) else null
+            val completion = QuestionCompletionEntity(
+                sessionId = sessionId,
+                questionId = questionId,
+                completedAt = timeProvider.currentTimeMillis()
             )
-            sessionDao.insertOrUpdateSession(updated)
-            return updated.toDomain()
-        }
+            val isFirstCompletion = questionCompletionDao.insertCompletionIgnore(completion) > 0
 
-        return session.toDomain()
+            if (isFirstCompletion) {
+                val question = questionDao.getQuestionById(questionId)
+                val attempt = attemptDao.getAttempt(sessionId, questionId)
+
+                if (question != null && attempt != null) {
+                    masteryRepository.updateMastery(question.learningObjectiveId, attempt.isCorrect)
+                }
+
+                val nextIndex = maxOf(session.currentQuestionIndex, currentQIndex + 1)
+                val isFinalized = nextIndex >= session.questionIds.size
+
+                val updated = session.copy(
+                    currentQuestionIndex = nextIndex,
+                    isFinalized = isFinalized || session.isFinalized,
+                    completedAt = if (isFinalized || session.isFinalized) (session.completedAt ?: timeProvider.currentTimeMillis()) else null
+                )
+                sessionDao.insertOrUpdateSession(updated)
+                updated.toDomain()
+            } else {
+                session.toDomain()
+            }
+        }
     }
 }
 

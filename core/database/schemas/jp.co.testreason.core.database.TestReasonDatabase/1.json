@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "19ed3d5c9f7cb85d4e420ed6cb29a544",
+    "identityHash": "da46f90418f706d2c2c98e3fa4309f87",
     "entities": [
       {
         "tableName": "questions",
@@ -254,45 +254,12 @@
         },
         "indices": [],
         "foreignKeys": []
-      },
-      {
-        "tableName": "question_completions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sessionId` TEXT NOT NULL, `questionId` TEXT NOT NULL, `completedAt` INTEGER NOT NULL, PRIMARY KEY(`sessionId`, `questionId`))",
-        "fields": [
-          {
-            "fieldPath": "sessionId",
-            "columnName": "sessionId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "questionId",
-            "columnName": "questionId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "completedAt",
-            "columnName": "completedAt",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "sessionId",
-            "questionId"
-          ]
-        },
-        "indices": [],
-        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '19ed3d5c9f7cb85d4e420ed6cb29a544')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'da46f90418f706d2c2c98e3fa4309f87')"
     ]
   }
 }
