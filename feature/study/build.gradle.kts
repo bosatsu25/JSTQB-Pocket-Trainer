@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "jp.co.testreason.feature.review"
+    namespace = "jp.co.testreason.feature.study"
     compileSdk = 35
 
     defaultConfig {
