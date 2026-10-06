@@ -10,7 +10,8 @@ import androidx.room.TypeConverters
         AttemptEntity::class,
         SessionEntity::class,
         MasteryEntity::class,
-        ReviewScheduleEntity::class
+        ReviewScheduleEntity::class,
+        QuestionCompletionEntity::class
     ],
     version = 1,
     exportSchema = true
@@ -22,4 +23,5 @@ abstract class TestReasonDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
     abstract fun masteryDao(): MasteryDao
     abstract fun reviewScheduleDao(): ReviewScheduleDao
+    abstract fun questionCompletionDao(): QuestionCompletionDao
 }

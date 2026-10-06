@@ -20,6 +20,7 @@ class QuizRepositoryTest {
     private lateinit var fakeAttemptDao: FakeAttemptDao
     private lateinit var fakeSessionDao: FakeSessionDao
     private lateinit var fakeReviewScheduleDao: FakeReviewScheduleDao
+    private lateinit var fakeQuestionCompletionDao: FakeQuestionCompletionDao
     private lateinit var fakeMasteryRepository: FakeMasteryRepository
     private lateinit var testTimeProvider: MutableTimeProvider
     private lateinit var spacedReviewEngine: SpacedReviewEngine
@@ -30,6 +31,7 @@ class QuizRepositoryTest {
         fakeAttemptDao = FakeAttemptDao()
         fakeSessionDao = FakeSessionDao()
         fakeReviewScheduleDao = FakeReviewScheduleDao()
+        fakeQuestionCompletionDao = FakeQuestionCompletionDao()
         fakeMasteryRepository = FakeMasteryRepository()
         testTimeProvider = MutableTimeProvider(1000000L)
         spacedReviewEngine = SpacedReviewEngine(testTimeProvider)
@@ -39,6 +41,7 @@ class QuizRepositoryTest {
             attemptDao = fakeAttemptDao,
             sessionDao = fakeSessionDao,
             reviewScheduleDao = fakeReviewScheduleDao,
+            questionCompletionDao = fakeQuestionCompletionDao,
             masteryRepository = fakeMasteryRepository,
             spacedReviewEngine = spacedReviewEngine,
             timeProvider = testTimeProvider
@@ -75,7 +78,7 @@ class QuizRepositoryTest {
             id = "att2",
             sessionId = "s1",
             questionId = "q_fl_1_1_1",
-            selectedChoiceId = "B", // Different choice
+            selectedChoiceId = "B",
             isCorrect = true,
             confidence = ConfidenceLevel.HIGH,
             mistakeReason = MistakeReason.MISREAD,
@@ -99,18 +102,27 @@ class QuizRepositoryTest {
             lastAttemptAt = 100000L,
             intervalDays = 1
         )
-        val futureSchedule = ReviewScheduleEntity(
+        val nowSchedule = ReviewScheduleEntity(
             questionId = "q_fl_1_2_1",
+            nextReviewAt = 1000000L, // Equal to current time
+            lastAttemptAt = 100000L,
+            intervalDays = 1
+        )
+        val futureSchedule = ReviewScheduleEntity(
+            questionId = "q_fl_2_1_1",
             nextReviewAt = 2000000L, // Future relative to 1000000L
             lastAttemptAt = 100000L,
             intervalDays = 7
         )
         fakeReviewScheduleDao.insertOrUpdateSchedule(dueSchedule)
+        fakeReviewScheduleDao.insertOrUpdateSchedule(nowSchedule)
         fakeReviewScheduleDao.insertOrUpdateSchedule(futureSchedule)
 
         val dueQuestions = quizRepository.observeDueReviewQuestions().first()
-        assertEquals(1, dueQuestions.size)
-        assertEquals("q_fl_1_1_1", dueQuestions[0].id)
+        assertEquals(2, dueQuestions.size)
+        assertTrue(dueQuestions.any { it.id == "q_fl_1_1_1" })
+        assertTrue(dueQuestions.any { it.id == "q_fl_1_2_1" })
+        assertFalse(dueQuestions.any { it.id == "q_fl_2_1_1" }) // Future excluded!
     }
 
     @Test
@@ -135,10 +147,10 @@ class QuizRepositoryTest {
         assertEquals(1, updatedSession1?.currentQuestionIndex)
         assertEquals(1, fakeMasteryRepository.updateCount)
 
-        // Repeat completeQuestion for same question
+        // Repeat completeQuestion for same question - MUST NOT increment updateCount or index!
         val updatedSession2 = quizRepository.completeQuestion(session.id, firstQId)
         assertEquals(1, updatedSession2?.currentQuestionIndex)
-        assertEquals(2, fakeMasteryRepository.updateCount)
+        assertEquals(1, fakeMasteryRepository.updateCount) // Mastery updated ONLY ONCE!
     }
 }
 
@@ -171,9 +183,11 @@ class FakeAttemptDao : AttemptDao {
         attempts.add(attempt)
         return attempts.size.toLong()
     }
-    override suspend fun updateAttempt(attempt: AttemptEntity) {
-        val index = attempts.indexOfFirst { it.sessionId == attempt.sessionId && it.questionId == attempt.questionId }
-        if (index >= 0) attempts[index] = attempt
+    override suspend fun updateMistakeReasonOnly(sessionId: String, questionId: String, mistakeReason: MistakeReason) {
+        val index = attempts.indexOfFirst { it.sessionId == sessionId && it.questionId == questionId }
+        if (index >= 0) {
+            attempts[index] = attempts[index].copy(mistakeReason = mistakeReason)
+        }
     }
 }
 
@@ -194,6 +208,20 @@ class FakeReviewScheduleDao : ReviewScheduleDao {
     override fun getAllSchedules() = flowOf(schedules.values.toList())
     override suspend fun insertOrUpdateSchedule(schedule: ReviewScheduleEntity) {
         schedules[schedule.questionId] = schedule
+    }
+}
+
+class FakeQuestionCompletionDao : QuestionCompletionDao {
+    private val completions = mutableListOf<QuestionCompletionEntity>()
+
+    override suspend fun getCompletion(sessionId: String, questionId: String): QuestionCompletionEntity? =
+        completions.find { it.sessionId == sessionId && it.questionId == questionId }
+
+    override suspend fun insertCompletionIgnore(completion: QuestionCompletionEntity): Long {
+        val exists = completions.any { it.sessionId == completion.sessionId && it.questionId == completion.questionId }
+        if (exists) return -1L
+        completions.add(completion)
+        return completions.size.toLong()
     }
 }
 

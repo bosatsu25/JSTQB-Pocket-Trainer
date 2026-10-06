@@ -39,4 +39,7 @@ object DatabaseModule {
 
     @Provides
     fun provideReviewScheduleDao(db: TestReasonDatabase): ReviewScheduleDao = db.reviewScheduleDao()
+
+    @Provides
+    fun provideQuestionCompletionDao(db: TestReasonDatabase): QuestionCompletionDao = db.questionCompletionDao()
 }

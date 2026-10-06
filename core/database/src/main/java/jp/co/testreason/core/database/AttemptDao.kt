@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import jp.co.testreason.core.model.MistakeReason
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -23,6 +24,6 @@ interface AttemptDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAttemptIgnore(attempt: AttemptEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun updateAttempt(attempt: AttemptEntity)
+    @Query("UPDATE attempts SET mistakeReason = :mistakeReason WHERE sessionId = :sessionId AND questionId = :questionId")
+    suspend fun updateMistakeReasonOnly(sessionId: String, questionId: String, mistakeReason: MistakeReason)
 }

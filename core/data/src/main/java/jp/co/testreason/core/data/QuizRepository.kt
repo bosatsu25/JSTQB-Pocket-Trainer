@@ -35,6 +35,7 @@ class QuizRepositoryImpl @Inject constructor(
     private val attemptDao: AttemptDao,
     private val sessionDao: SessionDao,
     private val reviewScheduleDao: ReviewScheduleDao,
+    private val questionCompletionDao: QuestionCompletionDao,
     private val masteryRepository: MasteryRepository,
     private val spacedReviewEngine: SpacedReviewEngine,
     private val timeProvider: TimeProvider
@@ -129,9 +130,7 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateMistakeReason(sessionId: String, questionId: String, mistakeReason: MistakeReason) {
-        val existing = attemptDao.getAttempt(sessionId, questionId) ?: return
-        val updated = existing.copy(mistakeReason = mistakeReason)
-        attemptDao.updateAttempt(updated)
+        attemptDao.updateMistakeReasonOnly(sessionId, questionId, mistakeReason)
     }
 
     override fun getAttemptsForSession(sessionId: String): Flow<List<Attempt>> {
@@ -168,23 +167,34 @@ class QuizRepositoryImpl @Inject constructor(
         val currentQIndex = session.questionIds.indexOf(questionId)
         if (currentQIndex < 0) return session.toDomain()
 
-        val question = questionDao.getQuestionById(questionId)
-        val attempt = attemptDao.getAttempt(sessionId, questionId)
+        val completion = QuestionCompletionEntity(
+            sessionId = sessionId,
+            questionId = questionId,
+            completedAt = timeProvider.currentTimeMillis()
+        )
+        val isFirstCompletion = questionCompletionDao.insertCompletionIgnore(completion) > 0
 
-        if (question != null && attempt != null) {
-            masteryRepository.updateMastery(question.learningObjectiveId, attempt.isCorrect)
+        if (isFirstCompletion) {
+            val question = questionDao.getQuestionById(questionId)
+            val attempt = attemptDao.getAttempt(sessionId, questionId)
+
+            if (question != null && attempt != null) {
+                masteryRepository.updateMastery(question.learningObjectiveId, attempt.isCorrect)
+            }
+
+            val nextIndex = maxOf(session.currentQuestionIndex, currentQIndex + 1)
+            val isFinalized = nextIndex >= session.questionIds.size
+
+            val updated = session.copy(
+                currentQuestionIndex = nextIndex,
+                isFinalized = isFinalized || session.isFinalized,
+                completedAt = if (isFinalized || session.isFinalized) (session.completedAt ?: timeProvider.currentTimeMillis()) else null
+            )
+            sessionDao.insertOrUpdateSession(updated)
+            return updated.toDomain()
         }
 
-        val nextIndex = maxOf(session.currentQuestionIndex, currentQIndex + 1)
-        val isFinalized = nextIndex >= session.questionIds.size
-
-        val updated = session.copy(
-            currentQuestionIndex = nextIndex,
-            isFinalized = isFinalized || session.isFinalized,
-            completedAt = if (isFinalized || session.isFinalized) (session.completedAt ?: timeProvider.currentTimeMillis()) else null
-        )
-        sessionDao.insertOrUpdateSession(updated)
-        return updated.toDomain()
+        return session.toDomain()
     }
 }
 
