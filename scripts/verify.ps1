@@ -2,8 +2,30 @@
 $ErrorActionPreference = "Stop"
 
 Remove-Item env:ANDROID_PREFS_ROOT -ErrorAction SilentlyContinue
-$env:JAVA_HOME = "C:\Program Files\Java\jdk-23"
-$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+
+# Auto-detect JAVA_HOME if not set or invalid
+if (-not $env:JAVA_HOME -or -not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
+    $possibleJdks = @(
+        "C:\Program Files\Java\jdk-23",
+        "C:\Program Files\Android\Android Studio\jbr"
+    )
+    foreach ($jdk in $possibleJdks) {
+        if (Test-Path "$jdk\bin\java.exe") {
+            $env:JAVA_HOME = $jdk
+            break
+        }
+    }
+}
+
+if (-not $env:ANDROID_HOME -or -not (Test-Path $env:ANDROID_HOME)) {
+    $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+}
+
+Write-Host "Using JAVA_HOME=$env:JAVA_HOME"
+Write-Host "Using ANDROID_HOME=$env:ANDROID_HOME"
+
+# Clean old XML test results prior to execution
+Get-ChildItem -Path "." -Recurse -Filter "TEST-*.xml" | Remove-Item -Force -ErrorAction SilentlyContinue
 
 Write-Host "=========================================="
 Write-Host "1. Running Unit Tests"
@@ -16,7 +38,7 @@ if ($testExitCode -ne 0) {
     exit $testExitCode
 }
 
-# Parse test XML reports to count actual executed unit tests
+# Parse test XML reports to count actual executed unit tests from CURRENT run
 $testFiles = Get-ChildItem -Path "." -Recurse -Filter "TEST-*.xml"
 $totalTests = 0
 $totalFailures = 0
@@ -40,6 +62,11 @@ if ($totalTests -eq 0) {
     exit 1
 }
 
+if ($totalFailures -gt 0) {
+    Write-Error "$totalFailures unit test(s) failed!"
+    exit 1
+}
+
 Write-Host "=========================================="
 Write-Host "2. Running Android Lint Check"
 Write-Host "=========================================="
@@ -52,7 +79,18 @@ if ($lintExitCode -ne 0) {
 }
 
 Write-Host "=========================================="
-Write-Host "3. Building Debug APK"
+Write-Host "3. Running Detekt Static Analysis"
+Write-Host "=========================================="
+cmd /c "gradlew.bat detekt --console=plain"
+$detektExitCode = $LASTEXITCODE
+
+if ($detektExitCode -ne 0) {
+    Write-Error "Detekt static analysis failed with exit code $detektExitCode"
+    exit $detektExitCode
+}
+
+Write-Host "=========================================="
+Write-Host "4. Building Debug APK"
 Write-Host "=========================================="
 cmd /c "gradlew.bat assembleDebug --console=plain"
 $buildExitCode = $LASTEXITCODE
@@ -72,6 +110,6 @@ if (Test-Path $apkPath) {
 }
 
 Write-Host "=========================================="
-Write-Host "VERIFICATION PASSED SUCCESSFULLY"
+Write-Host "ALL VERIFICATION GATES PASSED SUCCESSFULLY"
 Write-Host "=========================================="
 exit 0
