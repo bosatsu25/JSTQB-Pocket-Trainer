@@ -3,6 +3,7 @@ package jp.co.testreason.core.data
 import jp.co.testreason.core.database.*
 import jp.co.testreason.core.model.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -63,12 +64,16 @@ class QuizRepositoryImpl @Inject constructor(
 
     override suspend fun createWeaknessSession(): QuizSession {
         seedInitialQuestionsIfEmpty()
-        val reviewQuestions = getReviewQuestions()
-        val questions = questionDao.getRandomQuestions(5)
+        val reviewQuestionsList = getReviewQuestions().first()
+        val sessionQuestions = if (reviewQuestionsList.isNotEmpty()) {
+            reviewQuestionsList.take(5)
+        } else {
+            emptyList()
+        }
         val session = QuizSession(
             id = "session_weakness_" + System.currentTimeMillis(),
             mode = StudyMode.WEAKNESS,
-            questionIds = questions.map { it.id },
+            questionIds = sessionQuestions.map { it.id },
             currentQuestionIndex = 0,
             startedAt = System.currentTimeMillis(),
             completedAt = null,
@@ -87,7 +92,16 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun recordAttempt(attempt: Attempt) {
-        attemptDao.insertAttempt(attempt.toEntity())
+        val existing = attemptDao.getAttempt(attempt.sessionId, attempt.questionId)
+        if (existing != null) {
+            // Preserve initial choice and correctness; allow updating mistakeReason tag
+            val updated = existing.copy(
+                mistakeReason = attempt.mistakeReason ?: existing.mistakeReason
+            )
+            attemptDao.insertAttempt(updated)
+        } else {
+            attemptDao.insertAttempt(attempt.toEntity())
+        }
     }
 
     override fun getAttemptsForSession(sessionId: String): Flow<List<Attempt>> {
@@ -97,17 +111,27 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override fun getReviewQuestions(): Flow<List<Question>> {
-        return questionDao.getAllQuestions().map { entities ->
-            entities.map { it.toDomain() }
+        return attemptDao.getAllAttempts().map { attempts ->
+            val reviewQuestionIds = attempts.filter { attempt ->
+                !attempt.isCorrect ||
+                        attempt.confidence == ConfidenceLevel.GUESS ||
+                        attempt.confidence == ConfidenceLevel.LOW
+            }.map { it.questionId }.distinct()
+
+            reviewQuestionIds.mapNotNull { qId ->
+                questionDao.getQuestionById(qId)?.toDomain()
+            }
         }
     }
 
     override suspend fun updateSessionProgress(sessionId: String, currentIndex: Int, isFinalized: Boolean) {
         val session = sessionDao.getSessionById(sessionId) ?: return
+        // Do not allow rewinding index on finalized session
+        val targetIndex = maxOf(session.currentQuestionIndex, currentIndex)
         val updated = session.copy(
-            currentQuestionIndex = currentIndex,
-            isFinalized = isFinalized,
-            completedAt = if (isFinalized) System.currentTimeMillis() else session.completedAt
+            currentQuestionIndex = targetIndex,
+            isFinalized = isFinalized || session.isFinalized,
+            completedAt = if (isFinalized || session.isFinalized) (session.completedAt ?: System.currentTimeMillis()) else null
         )
         sessionDao.insertOrUpdateSession(updated)
     }

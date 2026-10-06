@@ -41,7 +41,18 @@ if ($totalTests -eq 0) {
 }
 
 Write-Host "=========================================="
-Write-Host "2. Building Debug APK"
+Write-Host "2. Running Android Lint Check"
+Write-Host "=========================================="
+cmd /c "gradlew.bat lintDebug --console=plain"
+$lintExitCode = $LASTEXITCODE
+
+if ($lintExitCode -ne 0) {
+    Write-Error "Android Lint check failed with exit code $lintExitCode"
+    exit $lintExitCode
+}
+
+Write-Host "=========================================="
+Write-Host "3. Building Debug APK"
 Write-Host "=========================================="
 cmd /c "gradlew.bat assembleDebug --console=plain"
 $buildExitCode = $LASTEXITCODE

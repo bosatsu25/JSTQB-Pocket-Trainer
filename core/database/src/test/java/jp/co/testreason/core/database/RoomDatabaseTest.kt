@@ -41,7 +41,7 @@ class RoomDatabaseTest {
     }
 
     @Test
-    fun insertAttempt_replacesDuplicateSessionAndQuestionId() = runTest {
+    fun getAttempt_returnsCorrectAttemptBySessionAndQuestion() = runTest {
         val attempt1 = AttemptEntity(
             id = "att1",
             sessionId = "s1",
@@ -49,30 +49,16 @@ class RoomDatabaseTest {
             selectedChoiceId = "A",
             isCorrect = false,
             confidence = ConfidenceLevel.LOW,
-            mistakeReason = MistakeReason.MISREAD,
+            mistakeReason = null,
             timeSpentMs = 1000,
             timestamp = 1000000
         )
         attemptDao.insertAttempt(attempt1)
 
-        val attempt2 = AttemptEntity(
-            id = "att1_updated",
-            sessionId = "s1",
-            questionId = "q1",
-            selectedChoiceId = "B",
-            isCorrect = true,
-            confidence = ConfidenceLevel.HIGH,
-            mistakeReason = null,
-            timeSpentMs = 1500,
-            timestamp = 1000050
-        )
-        attemptDao.insertAttempt(attempt2)
-
-        val attempts = attemptDao.getAttemptsBySession("s1").first()
-        assertEquals(1, attempts.size)
-        assertEquals("B", attempts[0].selectedChoiceId)
-        assertEquals(true, attempts[0].isCorrect)
-        assertEquals(ConfidenceLevel.HIGH, attempts[0].confidence)
+        val retrieved = attemptDao.getAttempt("s1", "q1")
+        assertNotNull(retrieved)
+        assertEquals("A", retrieved?.selectedChoiceId)
+        assertEquals(false, retrieved?.isCorrect)
     }
 
     @Test

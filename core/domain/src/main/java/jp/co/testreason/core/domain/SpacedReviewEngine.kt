@@ -21,7 +21,7 @@ class SpacedReviewEngine @Inject constructor() {
             ConfidenceLevel.LOW -> baseScore += 20f
             ConfidenceLevel.MEDIUM -> baseScore += 10f
             ConfidenceLevel.HIGH -> baseScore += 0f
-            null -> baseScore += 15f
+            null -> { /* Unspecified / No observation: no artificial penalty */ }
         }
 
         when (attempt.mistakeReason) {
