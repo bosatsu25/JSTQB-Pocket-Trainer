@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReviewScheduleDao {
-    @Query("SELECT * FROM review_schedules WHERE nextReviewAt <= :now")
+    @Query("SELECT * FROM review_schedules WHERE nextReviewAt <= :now ORDER BY nextReviewAt ASC, questionId ASC")
     fun getDueReviewSchedules(now: Long): Flow<List<ReviewScheduleEntity>>
 
     @Query("SELECT * FROM review_schedules WHERE questionId = :questionId")

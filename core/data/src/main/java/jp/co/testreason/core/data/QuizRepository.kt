@@ -1,9 +1,23 @@
 package jp.co.testreason.core.data
 
 import androidx.room.withTransaction
-import jp.co.testreason.core.database.*
+import jp.co.testreason.core.database.AttemptEntity
+import jp.co.testreason.core.database.ChoiceEntity
+import jp.co.testreason.core.database.QuestionCompletionEntity
+import jp.co.testreason.core.database.QuestionEntity
+import jp.co.testreason.core.database.ReviewScheduleEntity
+import jp.co.testreason.core.database.SessionEntity
+import jp.co.testreason.core.database.TestReasonDatabase
 import jp.co.testreason.core.domain.SpacedReviewEngine
-import jp.co.testreason.core.model.*
+import jp.co.testreason.core.model.Attempt
+import jp.co.testreason.core.model.Choice
+import jp.co.testreason.core.model.ConfidenceLevel
+import jp.co.testreason.core.model.MistakeReason
+import jp.co.testreason.core.model.Question
+import jp.co.testreason.core.model.QuizSession
+import jp.co.testreason.core.model.ReviewSchedule
+import jp.co.testreason.core.model.StudyMode
+import jp.co.testreason.core.model.TimeProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -33,15 +47,16 @@ interface QuizRepository {
 @Singleton
 class QuizRepositoryImpl @Inject constructor(
     private val db: TestReasonDatabase,
-    private val questionDao: QuestionDao,
-    private val attemptDao: AttemptDao,
-    private val sessionDao: SessionDao,
-    private val reviewScheduleDao: ReviewScheduleDao,
-    private val questionCompletionDao: QuestionCompletionDao,
     private val masteryRepository: MasteryRepository,
     private val spacedReviewEngine: SpacedReviewEngine,
     private val timeProvider: TimeProvider
 ) : QuizRepository {
+
+    private val questionDao get() = db.questionDao()
+    private val attemptDao get() = db.attemptDao()
+    private val sessionDao get() = db.sessionDao()
+    private val reviewScheduleDao get() = db.reviewScheduleDao()
+    private val questionCompletionDao get() = db.questionCompletionDao()
 
     override fun getAllQuestions(): Flow<List<Question>> {
         return questionDao.getAllQuestions().map { entities ->
@@ -81,7 +96,7 @@ class QuizRepositoryImpl @Inject constructor(
         val dueQuestions = observeDueReviewQuestions().first()
         val session = QuizSession(
             id = "session_review_" + timeProvider.currentTimeMillis(),
-            mode = StudyMode.CUSTOM,
+            mode = StudyMode.REVIEW,
             questionIds = dueQuestions.map { it.id },
             currentQuestionIndex = 0,
             startedAt = timeProvider.currentTimeMillis(),
@@ -123,6 +138,12 @@ class QuizRepositoryImpl @Inject constructor(
 
     override suspend fun finalizeAttempt(attempt: Attempt): Boolean {
         return db.withTransaction {
+            val session = sessionDao.getSessionById(attempt.sessionId) ?: return@withTransaction false
+            if (session.isFinalized) return@withTransaction false
+
+            val expectedQuestionId = session.questionIds.getOrNull(session.currentQuestionIndex)
+            if (expectedQuestionId != attempt.questionId) return@withTransaction false
+
             val insertedRowId = attemptDao.insertAttemptIgnore(attempt.toEntity())
             if (insertedRowId > 0) {
                 val schedule = spacedReviewEngine.calculateSchedule(attempt)
@@ -170,8 +191,12 @@ class QuizRepositoryImpl @Inject constructor(
     override suspend fun completeQuestion(sessionId: String, questionId: String): QuizSession? {
         return db.withTransaction {
             val session = sessionDao.getSessionById(sessionId) ?: return@withTransaction null
-            val currentQIndex = session.questionIds.indexOf(questionId)
-            if (currentQIndex < 0) return@withTransaction session.toDomain()
+            if (session.isFinalized) return@withTransaction session.toDomain()
+
+            val expectedQuestionId = session.questionIds.getOrNull(session.currentQuestionIndex)
+            if (expectedQuestionId != questionId) return@withTransaction session.toDomain()
+
+            val attempt = attemptDao.getAttempt(sessionId, questionId) ?: return@withTransaction session.toDomain()
 
             val completion = QuestionCompletionEntity(
                 sessionId = sessionId,
@@ -182,19 +207,17 @@ class QuizRepositoryImpl @Inject constructor(
 
             if (isFirstCompletion) {
                 val question = questionDao.getQuestionById(questionId)
-                val attempt = attemptDao.getAttempt(sessionId, questionId)
-
-                if (question != null && attempt != null) {
+                if (question != null) {
                     masteryRepository.updateMastery(question.learningObjectiveId, attempt.isCorrect)
                 }
 
-                val nextIndex = maxOf(session.currentQuestionIndex, currentQIndex + 1)
+                val nextIndex = session.currentQuestionIndex + 1
                 val isFinalized = nextIndex >= session.questionIds.size
 
                 val updated = session.copy(
                     currentQuestionIndex = nextIndex,
-                    isFinalized = isFinalized || session.isFinalized,
-                    completedAt = if (isFinalized || session.isFinalized) (session.completedAt ?: timeProvider.currentTimeMillis()) else null
+                    isFinalized = isFinalized,
+                    completedAt = if (isFinalized) timeProvider.currentTimeMillis() else null
                 )
                 sessionDao.insertOrUpdateSession(updated)
                 updated.toDomain()

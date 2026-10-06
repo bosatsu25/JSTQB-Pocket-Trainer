@@ -12,27 +12,12 @@ class SpacedReviewEngine @Inject constructor(
 ) {
 
     fun calculateSchedule(attempt: Attempt): ReviewSchedule {
-        var baseScore = if (attempt.isCorrect) 10f else 50f
-
-        when (attempt.confidence) {
-            ConfidenceLevel.GUESS -> baseScore += 30f
-            ConfidenceLevel.LOW -> baseScore += 20f
-            ConfidenceLevel.MEDIUM -> baseScore += 10f
-            ConfidenceLevel.HIGH -> baseScore += 0f
-            null -> { /* Unspecified / No observation */ }
-        }
-
-        when (attempt.mistakeReason) {
-            MistakeReason.CONCEPT -> baseScore += 25f
-            MistakeReason.TERMINOLOGY -> baseScore += 20f
-            MistakeReason.MISREAD -> baseScore += 10f
-            MistakeReason.CARELESS -> baseScore += 5f
-            null -> { }
-        }
+        val accuracyScore = if (attempt.isCorrect) 10f else 50f
+        val totalScore = accuracyScore + confidenceScore(attempt.confidence) + mistakeScore(attempt.mistakeReason)
 
         val intervalDays = when {
-            baseScore >= 60f -> 1
-            baseScore >= 30f -> 3
+            totalScore >= 60f -> 1
+            totalScore >= 30f -> 3
             else -> 7
         }
 
@@ -45,5 +30,20 @@ class SpacedReviewEngine @Inject constructor(
             lastAttemptAt = attempt.timestamp,
             intervalDays = intervalDays
         )
+    }
+
+    private fun confidenceScore(confidence: ConfidenceLevel?): Float = when (confidence) {
+        ConfidenceLevel.GUESS -> 30f
+        ConfidenceLevel.LOW -> 20f
+        ConfidenceLevel.MEDIUM -> 10f
+        ConfidenceLevel.HIGH, null -> 0f
+    }
+
+    private fun mistakeScore(mistakeReason: MistakeReason?): Float = when (mistakeReason) {
+        MistakeReason.CONCEPT -> 25f
+        MistakeReason.TERMINOLOGY -> 20f
+        MistakeReason.MISREAD -> 10f
+        MistakeReason.CARELESS -> 5f
+        null -> 0f
     }
 }

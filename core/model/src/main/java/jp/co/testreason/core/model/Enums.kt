@@ -18,6 +18,7 @@ enum class StudyMode {
     DAILY,
     CHAPTER,
     WEAKNESS,
+    REVIEW,
     MOCK_EXAM,
     CUSTOM
 }

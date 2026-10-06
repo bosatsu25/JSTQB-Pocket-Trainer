@@ -2,9 +2,15 @@ package jp.co.testreason.core.data
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import jp.co.testreason.core.database.*
+import jp.co.testreason.core.database.ReviewScheduleEntity
+import jp.co.testreason.core.database.TestReasonDatabase
 import jp.co.testreason.core.domain.SpacedReviewEngine
-import jp.co.testreason.core.model.*
+import jp.co.testreason.core.model.Attempt
+import jp.co.testreason.core.model.ConfidenceLevel
+import jp.co.testreason.core.model.Mastery
+import jp.co.testreason.core.model.MistakeReason
+import jp.co.testreason.core.model.StudyMode
+import jp.co.testreason.core.model.TimeProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -41,11 +47,6 @@ class QuizRepositoryTest {
 
         quizRepository = QuizRepositoryImpl(
             db = db,
-            questionDao = db.questionDao(),
-            attemptDao = db.attemptDao(),
-            sessionDao = db.sessionDao(),
-            reviewScheduleDao = db.reviewScheduleDao(),
-            questionCompletionDao = db.questionCompletionDao(),
             masteryRepository = fakeMasteryRepository,
             spacedReviewEngine = spacedReviewEngine,
             timeProvider = testTimeProvider
@@ -69,11 +70,13 @@ class QuizRepositoryTest {
 
     @Test
     fun finalizeAttempt_resubmissionPreservesFirstAnswerAndChoice() = runTest {
-        quizRepository.seedInitialQuestionsIfEmpty()
+        val session = quizRepository.createDailySession(5)
+        val firstQId = session.questionIds[0]
+
         val initialAttempt = Attempt(
             id = "att1",
-            sessionId = "s1",
-            questionId = "q_fl_1_1_1",
+            sessionId = session.id,
+            questionId = firstQId,
             selectedChoiceId = "A",
             isCorrect = false,
             confidence = ConfidenceLevel.LOW,
@@ -86,8 +89,8 @@ class QuizRepositoryTest {
 
         val duplicateSubmission = Attempt(
             id = "att2",
-            sessionId = "s1",
-            questionId = "q_fl_1_1_1",
+            sessionId = session.id,
+            questionId = firstQId,
             selectedChoiceId = "B",
             isCorrect = true,
             confidence = ConfidenceLevel.HIGH,
@@ -98,7 +101,7 @@ class QuizRepositoryTest {
         val secondResult = quizRepository.finalizeAttempt(duplicateSubmission)
         assertFalse(secondResult) // Rejected!
 
-        val attempts = quizRepository.getAttemptsForSession("s1").first()
+        val attempts = quizRepository.getAttemptsForSession(session.id).first()
         assertEquals(1, attempts.size)
         assertEquals("A", attempts[0].selectedChoiceId) // First choice preserved!
         assertEquals(false, attempts[0].isCorrect)
@@ -140,6 +143,7 @@ class QuizRepositoryTest {
         assertFalse(dueQuestions.any { it.id == "q_fl_2_2_1" }) // Unseen excluded!
 
         val dueSession = quizRepository.createDueReviewSession()
+        assertEquals(StudyMode.REVIEW, dueSession.mode)
         assertEquals(2, dueSession.questionIds.size)
         assertTrue(dueSession.questionIds.contains("q_fl_1_1_1"))
         assertTrue(dueSession.questionIds.contains("q_fl_1_2_1"))
@@ -171,6 +175,32 @@ class QuizRepositoryTest {
         val updatedSession2 = quizRepository.completeQuestion(session.id, firstQId)
         assertEquals(1, updatedSession2?.currentQuestionIndex)
         assertEquals(1, fakeMasteryRepository.updateCount) // Mastery updated ONLY ONCE!
+    }
+
+    @Test
+    fun completeQuestion_preventsAdvancingToFutureQuestions() = runTest {
+        val session = quizRepository.createDailySession(5)
+        val thirdQId = session.questionIds[2] // Index 2 (future question)
+
+        val attempt = Attempt(
+            id = "att_future",
+            sessionId = session.id,
+            questionId = thirdQId,
+            selectedChoiceId = "A",
+            isCorrect = true,
+            confidence = ConfidenceLevel.HIGH,
+            mistakeReason = null,
+            timeSpentMs = 1000,
+            timestamp = testTimeProvider.currentTimeMillis()
+        )
+        // Finalizing attempt on future question is rejected by domain invariant
+        val finalized = quizRepository.finalizeAttempt(attempt)
+        assertFalse(finalized)
+
+        // Attempting to complete future question leaves session index unchanged at 0
+        val sessionAfterFuture = quizRepository.completeQuestion(session.id, thirdQId)
+        assertEquals(0, sessionAfterFuture?.currentQuestionIndex)
+        assertEquals(0, fakeMasteryRepository.updateCount)
     }
 }
 

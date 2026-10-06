@@ -1,11 +1,12 @@
 package jp.co.testreason.core.data
 
+import android.content.Context
 import androidx.room.Room
-import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
-import jp.co.testreason.core.database.*
+import jp.co.testreason.core.database.TestReasonDatabase
 import jp.co.testreason.core.domain.SpacedReviewEngine
-import jp.co.testreason.core.model.*
+import jp.co.testreason.core.model.Attempt
+import jp.co.testreason.core.model.ConfidenceLevel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -28,7 +29,7 @@ class RepositoryRollbackTest {
 
     @Before
     fun setUp() {
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(
             context,
             TestReasonDatabase::class.java
@@ -40,11 +41,6 @@ class RepositoryRollbackTest {
 
         quizRepository = QuizRepositoryImpl(
             db = db,
-            questionDao = db.questionDao(),
-            attemptDao = db.attemptDao(),
-            sessionDao = db.sessionDao(),
-            reviewScheduleDao = db.reviewScheduleDao(),
-            questionCompletionDao = db.questionCompletionDao(),
             masteryRepository = fakeMasteryRepository,
             spacedReviewEngine = spacedReviewEngine,
             timeProvider = timeProvider
@@ -57,11 +53,25 @@ class RepositoryRollbackTest {
     }
 
     @Test
-    fun finalizeAttempt_transactionRollsBackOnException() = runTest {
+    fun finalizeAttempt_rollbackRevertsAttemptWhenScheduleFails() = runTest {
+        val session = quizRepository.createDailySession(5)
+        val firstQId = session.questionIds[0]
+
+        // Inject SQLite trigger to force failure during ReviewSchedule insertion
+        db.openHelper.writableDatabase.execSQL(
+            """
+            CREATE TRIGGER fail_review_schedule_insert
+            BEFORE INSERT ON review_schedules
+            BEGIN
+                SELECT RAISE(ABORT, 'Forced trigger failure on review_schedules');
+            END;
+            """.trimIndent()
+        )
+
         val attempt = Attempt(
-            id = "att_err",
-            sessionId = "s_err",
-            questionId = "q_err",
+            id = "att_rollback_1",
+            sessionId = session.id,
+            questionId = firstQId,
             selectedChoiceId = "A",
             isCorrect = false,
             confidence = ConfidenceLevel.LOW,
@@ -71,39 +81,59 @@ class RepositoryRollbackTest {
         )
 
         try {
-            db.withTransaction {
-                quizRepository.finalizeAttempt(attempt)
-                throw IllegalStateException("Simulated exception after finalizeAttempt call inside transaction")
-            }
-            fail("Expected exception was not thrown")
-        } catch (e: IllegalStateException) {
-            // Expected
+            // Direct call to production repository method
+            quizRepository.finalizeAttempt(attempt)
+            fail("Expected exception during finalizeAttempt transaction")
+        } catch (e: Exception) {
+            // Expected trigger error
         }
 
-        // Verify that neither Attempt nor ReviewSchedule was committed
-        val savedAttempt = db.attemptDao().getAttempt("s_err", "q_err")
+        // Verify production transaction rolled back BOTH attempt and review_schedule
+        val savedAttempt = db.attemptDao().getAttempt(session.id, firstQId)
         assertNull("Attempt should be rolled back and null", savedAttempt)
 
-        val savedSchedule = db.reviewScheduleDao().getSchedule("q_err")
+        val savedSchedule = db.reviewScheduleDao().getSchedule(firstQId)
         assertNull("Schedule should be rolled back and null", savedSchedule)
     }
 
     @Test
-    fun completeQuestion_transactionRollsBackOnException() = runTest {
+    fun completeQuestion_rollbackRevertsCompletionAndSessionIndexWhenSessionUpdateFails() = runTest {
         val session = quizRepository.createDailySession(5)
         val firstQId = session.questionIds[0]
 
+        val attempt = Attempt(
+            id = "att_rollback_2",
+            sessionId = session.id,
+            questionId = firstQId,
+            selectedChoiceId = "B",
+            isCorrect = true,
+            confidence = ConfidenceLevel.HIGH,
+            mistakeReason = null,
+            timeSpentMs = 1000,
+            timestamp = 1000000L
+        )
+        quizRepository.finalizeAttempt(attempt)
+
+        // Inject SQLite trigger on BEFORE INSERT ON quiz_sessions (fired by REPLACE)
+        db.openHelper.writableDatabase.execSQL(
+            """
+            CREATE TRIGGER fail_session_insert
+            BEFORE INSERT ON quiz_sessions
+            BEGIN
+                SELECT RAISE(ABORT, 'Forced trigger failure on quiz_sessions insert/replace');
+            END;
+            """.trimIndent()
+        )
+
         try {
-            db.withTransaction {
-                quizRepository.completeQuestion(session.id, firstQId)
-                throw IllegalStateException("Simulated exception inside transaction during completeQuestion")
-            }
-            fail("Expected exception was not thrown")
-        } catch (e: IllegalStateException) {
-            // Expected
+            // Direct call to production repository method
+            quizRepository.completeQuestion(session.id, firstQId)
+            fail("Expected exception during completeQuestion transaction")
+        } catch (e: Exception) {
+            // Expected trigger error
         }
 
-        // Verify that QuestionCompletion was NOT committed and Session index was NOT advanced
+        // Verify production transaction rolled back question_completion and session index
         val completion = db.questionCompletionDao().getCompletion(session.id, firstQId)
         assertNull("Completion should be rolled back and null", completion)
 
