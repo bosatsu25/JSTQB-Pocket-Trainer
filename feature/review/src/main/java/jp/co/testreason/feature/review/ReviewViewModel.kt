@@ -16,7 +16,7 @@ import javax.inject.Inject
 
 data class ReviewUiState(
     val isLoading: Boolean = true,
-    val reviewQuestions: List<Question> = emptyList()
+    val dueQuestions: List<Question> = emptyList()
 )
 
 sealed interface ReviewUiEvent {
@@ -41,18 +41,18 @@ class ReviewViewModel @Inject constructor(
     fun loadReviewQueue() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            quizRepository.getReviewQuestions().collect { questions ->
+            quizRepository.observeDueReviewQuestions().collect { questions ->
                 _uiState.value = ReviewUiState(
                     isLoading = false,
-                    reviewQuestions = questions
+                    dueQuestions = questions
                 )
             }
         }
     }
 
-    fun startWeaknessReview() {
+    fun startDueReviewSession() {
         viewModelScope.launch {
-            val session = quizRepository.createWeaknessSession()
+            val session = quizRepository.createDueReviewSession()
             _events.emit(ReviewUiEvent.NavigateToQuiz(session.id))
         }
     }

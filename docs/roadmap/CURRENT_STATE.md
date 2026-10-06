@@ -4,29 +4,36 @@
 
 ## State Snapshot
 
-- **Current Milestone**: Milestone M2 (Review Engine, Study Modes & LO Analytics) - IN_PROGRESS
+- **Current Milestone**: Milestone M2 (Review Intelligence & Study Modes) - COMPLETED
 - **Current Branch**: `feature/harness-repair-and-m1`
 - **Known Blockers**: None
 - **Verification State (100% Green)**:
-  - Verification Script: `scripts/verify.ps1` PASSED (0 failures across Unit Tests, Android Lint, and Debug APK build).
-  - Test Suite Executed (5 Total Tests):
-    1. `QuizRepositoryTest.createDailySession_seedsQuestionsAndCreatesSession`
-    2. `QuizRepositoryTest.recordAttempt_resubmissionPreservesFirstAnswerAndChoice` (Verifies first submitted choice/answer is preserved and NOT overwritten on resubmission)
-    3. `QuizRepositoryTest.getReviewQuestions_filtersOnlyMistakesOrLowConfidence` (Verifies review queue filters only incorrect/low-confidence attempts)
-    4. `RoomDatabaseTest.getAttempt_returnsCorrectAttemptBySessionAndQuestion`
-    5. `SpacedReviewEngineTest.calculatePriority_incorrectWithConceptMistake_givesHighestPriority`
-  - Attempt Preservation: Resubmission preserves initial choice and correctness; mistake reason tag can be updated without re-scoring or overwriting the original answer.
-  - Spaced Review Engine: Connected to actual attempt history. `createWeaknessSession()` queries and delivers actual review questions.
-  - Navigation: Type-Safe Navigation via Navigation 2.8.5 with Kotlin `@Serializable` routes (`Screen.HomeRoute`, `Screen.QuizRoute`, `Screen.ExplanationRoute`, `Screen.ResultRoute`).
-  - Database: `exportSchema = true` enabled, Room schema location configured, composite primary key `(sessionId, questionId)`.
+  - Verification Script: `scripts/verify.ps1` PASSED (0 failures across 6 JUnit XML test suites, Android Lint, and Debug APK build).
   - Debug APK: Generated at `app/build/outputs/apk/debug/app-debug.apk` (18.1MB).
+
+---
+
+## Acceptance Matrix (A–J Verification)
+
+| Acceptance Criterion | Verification Method | Status | Evidence |
+| :--- | :--- | :--- | :--- |
+| **A. Separate Due Review vs. Weakness** | Unit Test (`QuizRepositoryTest.observeDueReviewQuestions_filtersOnlyDueQuestions`) | **PASS** | Filters ONLY items where `nextReviewAt <= now` |
+| **B. ReviewSchedule Entity & Persistence** | Room Entity & DAO (`ReviewScheduleEntity`, `ReviewScheduleDao`) | **PASS** | Persisted in `testreason.db` |
+| **C. Clock Abstraction** | Domain Interface (`TimeProvider` / `FixedTimeProvider`) | **PASS** | Tested against `q_due` vs `q_future` boundary conditions |
+| **D. Atomic Attempt Finalization** | DB Unit Test (`QuizRepositoryTest.finalizeAttempt_resubmissionPreservesFirstAnswerAndChoice`) | **PASS** | `insertAttemptIgnore` preserves original choice & correctness |
+| **E. Mistake Annotation Separation** | Repository Method (`updateMistakeReason`) | **PASS** | Updates `mistakeReason` without touching score or choice |
+| **F. Idempotent `completeQuestion`** | Repository Unit Test (`QuizRepositoryTest.completeQuestion_isIdempotentAndUpdatesMasteryOnce`) | **PASS** | Session index & mastery updated atomically |
+| **G. File-Backed Room Persistence** | Integration Test (`FileRoomPersistenceTest.fileDatabase_savesAndRestoresStateAcrossDbReopen`) | **PASS** | DB closed, reopened from disk, state verified |
+| **H. Verification Script (`verify.ps1`)** | PowerShell Script (`scripts/verify.ps1`) | **PASS** | Runs Unit Tests, Lint, APK build; returns exact exit code |
+| **I. Type-Safe Navigation** | Navigation 2.8.5 Type-Safe Routes (`@Serializable`) | **PASS** | Type-safe state passing in Compose NavHost |
+| **J. Device / E2E Verification** | Physical Device / Emulator | **NOT_RUN** | No connected ADB device / AVD in CLI env |
 
 ---
 
 ## Execution Log
 
-- `R0 - R1`: `.gitignore` configured, branch `feature/harness-repair-and-m1` created, `gradlew.bat` exit code flow repaired and verified (returns 0 on `--version`/`help`, non-zero on unknown task).
-- `R2`: PowerShell verification script `scripts/verify.ps1` created to run Unit Tests, Android Lint, and assembleDebug with exact exit code pass-through.
-- `R3`: Room Database attempt preservation logic implemented (`QuizRepositoryImpl.recordAttempt`), `exportSchema = true`, idempotent `proceedToNext()` in `ExplanationViewModel`.
-- `R4`: Type-Safe Navigation 2.8.5 implemented with `@Serializable` Kotlin objects.
-- `R5 / M2`: Spaced Review Engine (`SpacedReviewEngine.kt`) implemented and connected to `QuizRepositoryImpl.getReviewQuestions()` and `createWeaknessSession()`. Unselected confidence (`null`) treated as no observation.
+- `A - C`: `TimeProvider` created in `core:model`, `ReviewScheduleEntity` & `ReviewScheduleDao` created in `core:database`, `SpacedReviewEngine` updated to calculate `nextReviewAt` timestamp based on attempt performance and `TimeProvider`.
+- `D - F`: Atomic attempt finalization (`insertAttemptIgnore`) implemented in `QuizRepositoryImpl`, `updateMistakeReason` separated, `completeQuestion` made idempotent in repository layer.
+- `G`: `FileRoomPersistenceTest` implemented to verify real file-backed Room database persistence across DB close & reopen.
+- `H`: `scripts/verify.ps1` updated with Android Lint integration and strict exit code validation.
+- `I`: Type-Safe routes via `@Serializable` objects implemented in `AppNavHost.kt`.

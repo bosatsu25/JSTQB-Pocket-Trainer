@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import jp.co.testreason.core.data.MasteryRepository
 import jp.co.testreason.core.data.QuizRepository
 import jp.co.testreason.core.model.Attempt
 import jp.co.testreason.core.model.MistakeReason
@@ -35,7 +34,6 @@ sealed interface ExplanationUiEvent {
 @HiltViewModel
 class ExplanationViewModel @Inject constructor(
     private val quizRepository: QuizRepository,
-    private val masteryRepository: MasteryRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -48,8 +46,6 @@ class ExplanationViewModel @Inject constructor(
 
     private val _events = MutableSharedFlow<ExplanationUiEvent>()
     val events: SharedFlow<ExplanationUiEvent> = _events.asSharedFlow()
-
-    private var hasUpdatedMastery = false
 
     init {
         loadData()
@@ -76,11 +72,12 @@ class ExplanationViewModel @Inject constructor(
     }
 
     fun selectMistakeReason(reason: MistakeReason) {
-        val currentAttempt = _uiState.value.attempt ?: return
-        val updatedAttempt = currentAttempt.copy(mistakeReason = reason)
         viewModelScope.launch {
-            quizRepository.recordAttempt(updatedAttempt)
-            _uiState.value = _uiState.value.copy(attempt = updatedAttempt)
+            quizRepository.updateMistakeReason(sessionId, questionId, reason)
+            val currentAttempt = _uiState.value.attempt
+            if (currentAttempt != null) {
+                _uiState.value = _uiState.value.copy(attempt = currentAttempt.copy(mistakeReason = reason))
+            }
         }
     }
 
@@ -88,36 +85,20 @@ class ExplanationViewModel @Inject constructor(
         val state = _uiState.value
         val session = state.session ?: return
         val question = state.question ?: return
-        val attempt = state.attempt ?: return
 
         if (state.isProcessing) return
         _uiState.value = state.copy(isProcessing = true)
 
         viewModelScope.launch {
-            // Guarantee mastery is updated at most once per question in a session
-            if (!hasUpdatedMastery) {
-                masteryRepository.updateMastery(
-                    learningObjectiveId = question.learningObjectiveId,
-                    isCorrect = attempt.isCorrect
-                )
-                hasUpdatedMastery = true
-            }
-
-            val currentQIndex = session.questionIds.indexOf(questionId)
-            val nextIndex = if (currentQIndex >= 0) currentQIndex + 1 else session.currentQuestionIndex + 1
-            val isFinalized = nextIndex >= session.questionIds.size
-
-            quizRepository.updateSessionProgress(
-                sessionId = sessionId,
-                currentIndex = nextIndex,
-                isFinalized = isFinalized
-            )
+            val updatedSession = quizRepository.completeQuestion(sessionId, questionId)
+            val isFinalized = updatedSession?.isFinalized ?: false
 
             if (isFinalized) {
                 _events.emit(ExplanationUiEvent.NavigateToResult(sessionId))
             } else {
                 _events.emit(ExplanationUiEvent.NavigateToNextQuestion(sessionId))
             }
+            _uiState.value = _uiState.value.copy(isProcessing = false)
         }
     }
 }

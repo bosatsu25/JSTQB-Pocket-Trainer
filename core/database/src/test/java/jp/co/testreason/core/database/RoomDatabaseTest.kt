@@ -53,7 +53,7 @@ class RoomDatabaseTest {
             timeSpentMs = 1000,
             timestamp = 1000000
         )
-        attemptDao.insertAttempt(attempt1)
+        attemptDao.insertAttemptIgnore(attempt1)
 
         val retrieved = attemptDao.getAttempt("s1", "q1")
         assertNotNull(retrieved)

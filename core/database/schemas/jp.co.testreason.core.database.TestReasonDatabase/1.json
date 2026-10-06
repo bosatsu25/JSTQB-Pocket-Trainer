@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "76b21278cda970c978d8ff9f07e4054b",
+    "identityHash": "da46f90418f706d2c2c98e3fa4309f87",
     "entities": [
       {
         "tableName": "questions",
@@ -216,12 +216,50 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "review_schedules",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`questionId` TEXT NOT NULL, `nextReviewAt` INTEGER NOT NULL, `lastAttemptAt` INTEGER NOT NULL, `intervalDays` INTEGER NOT NULL, PRIMARY KEY(`questionId`))",
+        "fields": [
+          {
+            "fieldPath": "questionId",
+            "columnName": "questionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextReviewAt",
+            "columnName": "nextReviewAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastAttemptAt",
+            "columnName": "lastAttemptAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intervalDays",
+            "columnName": "intervalDays",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "questionId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '76b21278cda970c978d8ff9f07e4054b')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'da46f90418f706d2c2c98e3fa4309f87')"
     ]
   }
 }

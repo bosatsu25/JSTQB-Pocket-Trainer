@@ -33,7 +33,7 @@ fun ReviewScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("復習キュー") }) },
+        topBar = { TopAppBar(title = { Text("今日の復習（Due Review）") }) },
         modifier = modifier
     ) { padding ->
         when {
@@ -47,7 +47,7 @@ fun ReviewScreen(
                     CircularProgressIndicator()
                 }
             }
-            uiState.reviewQuestions.isEmpty() -> {
+            uiState.dueQuestions.isEmpty() -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -59,7 +59,7 @@ fun ReviewScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .semantics { contentDescription = "復習対象（0件）。すべての復習が完了しています。" }
+                            .semantics { contentDescription = "復習対象（0件）。本日の復習は完了しています。" }
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
@@ -71,7 +71,7 @@ fun ReviewScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "素晴らしい！現時点で復習が必要な問題はありません。",
+                                text = "素晴らしい！本日復習期限を迎えた問題はありません。",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -88,25 +88,25 @@ fun ReviewScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Button(
-                        onClick = { viewModel.startWeaknessReview() },
+                        onClick = { viewModel.startDueReviewSession() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
-                            .semantics { contentDescription = "復習セッションを開始" },
+                            .semantics { contentDescription = "期限到来の復習を開始" },
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("復習セッションを開始 (${uiState.reviewQuestions.size}問)")
+                        Text("復習セッションを開始 (${uiState.dueQuestions.size}問)")
                     }
 
                     Text(
-                        text = "復習対象問題一覧",
+                        text = "本日期限の復習対象",
                         style = MaterialTheme.typography.titleMedium
                     )
 
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(uiState.reviewQuestions) { question ->
+                        items(uiState.dueQuestions) { question ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp)

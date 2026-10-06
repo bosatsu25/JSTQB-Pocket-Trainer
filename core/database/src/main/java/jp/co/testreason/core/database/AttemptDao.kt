@@ -20,6 +20,9 @@ interface AttemptDao {
     @Query("SELECT * FROM attempts")
     fun getAllAttempts(): Flow<List<AttemptEntity>>
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAttemptIgnore(attempt: AttemptEntity): Long
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAttempt(attempt: AttemptEntity)
+    suspend fun updateAttempt(attempt: AttemptEntity)
 }

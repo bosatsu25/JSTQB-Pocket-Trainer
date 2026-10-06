@@ -100,7 +100,7 @@ class QuizViewModel @Inject constructor(
                 timestamp = System.currentTimeMillis()
             )
 
-            quizRepository.recordAttempt(attempt)
+            quizRepository.finalizeAttempt(attempt)
             _events.emit(
                 QuizUiEvent.NavigateToExplanation(
                     sessionId = sessionId,
