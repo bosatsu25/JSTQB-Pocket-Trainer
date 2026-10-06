@@ -20,17 +20,6 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-        }
-    }
-    sourceSets {
-        getByName("test") {
-            assets.srcDir(file("src/test/assets"))
-            assets.srcDir(file("schemas"))
-        }
-    }
 }
 
 ksp {
