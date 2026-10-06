@@ -95,25 +95,28 @@ class QuizRepositoryTest {
     }
 
     @Test
-    fun observeDueReviewQuestions_filtersOnlyDueQuestions() = runTest {
+    fun observeDueReviewQuestions_includesDueAndNow_excludesFutureAndUnseen() = runTest {
+        // Current time: 1000000L
         val dueSchedule = ReviewScheduleEntity(
             questionId = "q_fl_1_1_1",
-            nextReviewAt = 500000L, // Past
+            nextReviewAt = 500000L, // Past (< now)
             lastAttemptAt = 100000L,
             intervalDays = 1
         )
         val nowSchedule = ReviewScheduleEntity(
             questionId = "q_fl_1_2_1",
-            nextReviewAt = 1000000L, // Equal to current time
+            nextReviewAt = 1000000L, // Equal to now
             lastAttemptAt = 100000L,
             intervalDays = 1
         )
         val futureSchedule = ReviewScheduleEntity(
             questionId = "q_fl_2_1_1",
-            nextReviewAt = 2000000L, // Future relative to 1000000L
+            nextReviewAt = 2000000L, // Future relative to 1000000L (> now)
             lastAttemptAt = 100000L,
             intervalDays = 7
         )
+        // q_fl_2_2_1 has no schedule in fakeReviewScheduleDao (q_unseen)
+
         fakeReviewScheduleDao.insertOrUpdateSchedule(dueSchedule)
         fakeReviewScheduleDao.insertOrUpdateSchedule(nowSchedule)
         fakeReviewScheduleDao.insertOrUpdateSchedule(futureSchedule)
@@ -123,6 +126,13 @@ class QuizRepositoryTest {
         assertTrue(dueQuestions.any { it.id == "q_fl_1_1_1" })
         assertTrue(dueQuestions.any { it.id == "q_fl_1_2_1" })
         assertFalse(dueQuestions.any { it.id == "q_fl_2_1_1" }) // Future excluded!
+        assertFalse(dueQuestions.any { it.id == "q_fl_2_2_1" }) // Unseen excluded!
+
+        // Test createDueReviewSession uses the exact dueQuestions
+        val dueSession = quizRepository.createDueReviewSession()
+        assertEquals(2, dueSession.questionIds.size)
+        assertTrue(dueSession.questionIds.contains("q_fl_1_1_1"))
+        assertTrue(dueSession.questionIds.contains("q_fl_1_2_1"))
     }
 
     @Test
