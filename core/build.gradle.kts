@@ -59,3 +59,8 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.robolectric)
 }
+
+// QuestionContentValidationTest reads the bundled JSON directly from disk; declare it so edits re-run the test.
+tasks.withType<Test>().configureEach {
+    inputs.dir("src/main/assets/questions").withPropertyName("bundledQuestions")
+}
