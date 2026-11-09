@@ -82,3 +82,13 @@ correct LOW = 0.5, correct GUESS = 0.25, incorrect = 0.
   questions → random questions. No duplicates.
 - **Review**: all due questions. **Weakness**: up to 5 weak questions.
 - When a queue is empty no session is created; the UI says there is nothing to study in that mode.
+
+## Learning Objective States (Analytics)
+| State | Rule |
+|---|---|
+| 未着手 (not started) | no answer yet |
+| 弱点 (weak) | mastery < 0.6 |
+| 習熟 (mastered) | mastery ≥ 0.8 **and** at least 2 answers |
+| 学習中 (learning) | everything else |
+
+Tapping an LO starts a session with up to 5 of its questions (unseen → weak → least recently answered).

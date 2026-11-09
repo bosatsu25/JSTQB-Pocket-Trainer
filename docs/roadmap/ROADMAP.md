@@ -51,10 +51,13 @@ Tracking epic: GitHub issue #1 (dependency-ordered checklist of #2–#25).
   - **Status**: COMPLETED
 - **Wave 5.2: Mastery & LO Analytics Dashboard**
   - **Goal**: Visualize LO mastery levels and weakness areas.
-  - **Status**: TODO (#18; chapter-level progress screen already in place)
+  - **Status**: COMPLETED (#18)
 - **Wave 6.1: Study Modes (Chapter & Weakness Review)**
   - **Goal**: Implement Chapter Study and Targeted Weakness Review sessions.
-  - **Status**: TODO (#17)
+  - **Status**: COMPLETED (#17; weakness sessions in #14/#16)
+- **Wave 6.2: Responsive Layout & Screen Spec Alignment (#20)**
+  - **Goal**: Every screen verified on 5 device configurations; result reflection card; confidence rule aligned.
+  - **Status**: COMPLETED
 
 ---
 

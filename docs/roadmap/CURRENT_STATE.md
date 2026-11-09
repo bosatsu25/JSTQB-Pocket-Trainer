@@ -45,12 +45,20 @@
 | **Weakness & Mastery (#14)** | `ReviewIntelligenceTest.weakQuestion_isClearedByALaterConfidentCorrectAnswer`, `MasteryRepositoryTest` (2) | **PASS** | Latest-attempt weakness; confidence-weighted mastery via `TimeProvider` |
 | **Empty Sessions / Live Clock / Daily Mix (#15)** | `ReviewIntelligenceTest` (3 more tests) | **PASS** | No empty sessions; due queue follows the clock on the same Flow; daily = due → weak → unseen |
 | **Navigation & Home (#16)** | `HomeUiStateTest`, `ChapterProgressTest`, `assembleDebug` | **PASS** | Review/Analytics routes, resume card, result CTA; no empty `onClick` left. UI not exercised on a device |
+| **Responsive Layout (5 devices)** | `StudyScreensResponsiveTest`, `ProgressScreensResponsiveTest` (40 cases), `ResponsiveHarnessSelfTest` (3) | **PASS** | Home, Quiz, Explanation, Result, Chapter Select, Review (2 states), Analytics on 320×568, 320×568 @font 2.0, 411×891, 891×411, 1280×800: no horizontal overflow, touch targets ≥ 48dp, actions reachable, two panes ≥ 720dp |
+| **Result Reflection (#20)** | `SessionSummaryTest` | **PASS** | Time, confidence × correctness, strong vs review LOs |
+| **Chapter Study (#17)** | `ChapterSessionTest`, `ChapterOverviewTest` | **PASS** | Chapter-only sessions ordered unseen → weak → oldest |
+| **LO Dashboard (#18)** | `DashboardTest`, `LearningObjectiveSessionTest` | **PASS** | K-level accuracy, mistake breakdown, 64 LO states, LO sessions |
 | **Copyright Check (ADR-0006)** | Reviewer pass + 18-char overlap script against the syllabus text (not committed: the syllabus text is copyrighted) | **PASS** | Seven independent reviewers (not the authors) re-checked every key against the syllabus (K3 answers recomputed) and rewrote copied text; 18-char overlap hits went from 178 to 0 across all 8 files. Key changes: none. Wording fixes for ambiguity: c1-016, c2-025, c3-001; explanation fixes: c4-011, c4-016, c5-028 |
 
 ---
 
 ## Execution Log
 
+- `claude/vibrant-maxwell-2sx0ab` (Waves 5.2 / 6.1 / 6.2, issues #17, #18, #20 + responsive tests):
+  - Responsive Compose UI test harness on Robolectric (NATIVE graphics) over 5 device configurations; fixed chip touch targets (~36×35dp → 48dp), wrapping menus/chips, width cap, two-pane quiz/explanation.
+  - Result reflection card; confidence "not selected" rule aligned between SCREEN_SPEC and LEARNING_LOOP.
+  - Chapter study mode and chapter select screen; LO dashboard with LO sessions.
 - `claude/vibrant-maxwell-2sx0ab` (Wave 5.1 / 5.1b, issues #14–#16):
   - Spaced review: mistake tag re-schedules, intervals grow from the previous one, latest-attempt weakness, confidence-weighted mastery (spec in `LEARNING_LOOP.md`).
   - Sessions: empty queues create no session; due queue re-evaluated on a 1-minute clock; daily mix due → weak → unseen → random.

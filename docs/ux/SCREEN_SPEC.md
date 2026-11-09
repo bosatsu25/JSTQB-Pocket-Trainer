@@ -74,3 +74,12 @@
 3. **Recommended Next Action CTA**:
    - Prominent button that starts the next session directly: weakness session when accuracy < 80% (daily mix if
      there is no weak question), otherwise the daily mix.
+
+---
+
+## 5. Analytics Screen (`AnalyticsScreen`)
+1. **Accuracy by knowledge level**: K1 / K2 / K3 with correct / answered (or 未回答).
+2. **Mistake reasons**: count per tag, plus untagged misses (shown only when there are misses).
+3. **Chapter cards**: mastery bar (with text), answered LOs / total, and every LO as a ≥ 48dp row with its
+   state in text (未着手 / 弱点 / 学習中 / 習熟) and score. Tapping a row with questions starts an LO session.
+
