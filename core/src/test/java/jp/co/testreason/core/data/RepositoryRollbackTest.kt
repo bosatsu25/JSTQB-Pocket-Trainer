@@ -43,7 +43,8 @@ class RepositoryRollbackTest {
             db = db,
             masteryRepository = fakeMasteryRepository,
             spacedReviewEngine = spacedReviewEngine,
-            timeProvider = timeProvider
+            timeProvider = timeProvider,
+            bundledQuestionSource = testQuestionSource
         )
     }
 
@@ -72,7 +73,7 @@ class RepositoryRollbackTest {
             id = "att_rollback_1",
             sessionId = session.id,
             questionId = firstQId,
-            selectedChoiceId = "A",
+            selectedChoiceIds = listOf("A"),
             isCorrect = false,
             confidence = ConfidenceLevel.LOW,
             mistakeReason = null,
@@ -105,7 +106,7 @@ class RepositoryRollbackTest {
             id = "att_rollback_2",
             sessionId = session.id,
             questionId = firstQId,
-            selectedChoiceId = "B",
+            selectedChoiceIds = listOf("B"),
             isCorrect = true,
             confidence = ConfidenceLevel.HIGH,
             mistakeReason = null,

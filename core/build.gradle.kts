@@ -24,6 +24,13 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets {
+        // Exported Room schemas are needed by MigrationTestHelper.
+        getByName("test").assets.srcDirs(files("$projectDir/schemas"))
+    }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 ksp {

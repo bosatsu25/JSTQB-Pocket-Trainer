@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import jp.co.testreason.core.model.ConfidenceLevel
+import jp.co.testreason.core.ui.components.ScenarioText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,10 +78,17 @@ fun QuizScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        val lo = question.learningObjective
                         SuggestionChip(
                             onClick = { },
-                            label = { Text(question.learningObjectiveId) }
+                            label = {
+                                Text(if (lo != null) "${lo.id} (${lo.kLevel}) ${lo.summary}" else question.learningObjectiveId)
+                            }
                         )
+                        question.scenario?.let { scenario ->
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ScenarioText(text = scenario)
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = question.stem,
@@ -90,12 +98,13 @@ fun QuizScreen(
                 }
 
                 // Choices
+                val isMultiSelect = question.selectCount > 1
                 Text(
-                    text = "選択肢",
+                    text = if (isMultiSelect) "選択肢（${question.selectCount}つ選択）" else "選択肢",
                     style = MaterialTheme.typography.titleMedium
                 )
                 question.choices.forEach { choice ->
-                    val isSelected = uiState.selectedChoiceId == choice.id
+                    val isSelected = choice.id in uiState.selectedChoiceIds
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -114,10 +123,17 @@ fun QuizScreen(
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { viewModel.selectChoice(choice.id) }
-                            )
+                            if (isMultiSelect) {
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { viewModel.selectChoice(choice.id) }
+                                )
+                            } else {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { viewModel.selectChoice(choice.id) }
+                                )
+                            }
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = "${choice.id}. ${choice.text}",
@@ -156,7 +172,7 @@ fun QuizScreen(
                         .fillMaxWidth()
                         .height(52.dp)
                         .semantics { contentDescription = "解答を確定する" },
-                    enabled = uiState.selectedChoiceId != null && !uiState.isSubmitting,
+                    enabled = uiState.canSubmit,
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("解答を確定する")

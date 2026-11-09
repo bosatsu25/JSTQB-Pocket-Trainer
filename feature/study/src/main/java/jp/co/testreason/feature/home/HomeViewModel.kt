@@ -39,7 +39,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            quizRepository.seedInitialQuestionsIfEmpty()
+            quizRepository.syncBundledQuestions()
         }
         viewModelScope.launch {
             masteryRepository.getAllMasteries().collect { masteries ->

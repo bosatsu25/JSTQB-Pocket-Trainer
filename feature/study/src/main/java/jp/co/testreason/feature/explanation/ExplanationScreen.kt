@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import jp.co.testreason.core.model.MistakeReason
+import jp.co.testreason.core.ui.components.ScenarioText
 import jp.co.testreason.core.ui.theme.CorrectGreen
 import jp.co.testreason.core.ui.theme.IncorrectRed
 
@@ -97,9 +98,13 @@ fun ExplanationScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "解説 (${question.learningObjectiveId})",
+                            text = "解説 (${question.learningObjectiveId} / シラバス ${question.learningObjectiveId.removePrefix("FL-")})",
                             style = MaterialTheme.typography.titleMedium
                         )
+                        question.scenario?.let { scenario ->
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ScenarioText(text = scenario)
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = question.explanation,
@@ -115,7 +120,7 @@ fun ExplanationScreen(
                 )
 
                 question.choices.forEach { choice ->
-                    val isSelected = choice.id == attempt.selectedChoiceId
+                    val isSelected = choice.id in attempt.selectedChoiceIds
                     val isChoiceCorrect = choice.isCorrect
 
                     Card(

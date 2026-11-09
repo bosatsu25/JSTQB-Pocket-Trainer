@@ -21,10 +21,15 @@ import javax.inject.Inject
 data class QuizUiState(
     val session: QuizSession? = null,
     val currentQuestion: Question? = null,
-    val selectedChoiceId: String? = null,
+    val selectedChoiceIds: Set<String> = emptySet(),
     val confidence: ConfidenceLevel? = null,
     val isSubmitting: Boolean = false
-)
+) {
+    val requiredSelectionCount: Int get() = currentQuestion?.selectCount ?: 1
+
+    val canSubmit: Boolean
+        get() = currentQuestion != null && selectedChoiceIds.size == requiredSelectionCount && !isSubmitting
+}
 
 sealed interface QuizUiEvent {
     data class NavigateToExplanation(val sessionId: String, val questionId: String, val attemptId: String) : QuizUiEvent
@@ -60,15 +65,28 @@ class QuizViewModel @Inject constructor(
                 _uiState.value = QuizUiState(
                     session = session,
                     currentQuestion = question,
-                    selectedChoiceId = null,
+                    selectedChoiceIds = emptySet(),
                     confidence = null
                 )
             }
         }
     }
 
+    /**
+     * Single-answer questions replace the selection; multi-answer questions toggle the choice
+     * and ignore taps beyond the required count.
+     */
     fun selectChoice(choiceId: String) {
-        _uiState.value = _uiState.value.copy(selectedChoiceId = choiceId)
+        val state = _uiState.value
+        val required = state.requiredSelectionCount
+        val current = state.selectedChoiceIds
+        val updated = when {
+            required == 1 -> setOf(choiceId)
+            choiceId in current -> current - choiceId
+            current.size < required -> current + choiceId
+            else -> current
+        }
+        _uiState.value = state.copy(selectedChoiceIds = updated)
     }
 
     fun selectConfidence(confidence: ConfidenceLevel) {
@@ -78,13 +96,13 @@ class QuizViewModel @Inject constructor(
     fun submitAnswer() {
         val state = _uiState.value
         val question = state.currentQuestion ?: return
-        val selectedChoiceId = state.selectedChoiceId ?: return
-        if (state.isSubmitting) return
+        if (!state.canSubmit) return
+        val selectedChoiceIds = state.selectedChoiceIds.sorted()
 
         _uiState.value = state.copy(isSubmitting = true)
 
         viewModelScope.launch {
-            val isCorrect = question.choices.find { it.id == selectedChoiceId }?.isCorrect == true
+            val isCorrect = question.isCorrectSelection(selectedChoiceIds)
             val attemptId = "attempt_" + System.currentTimeMillis()
             val timeSpent = System.currentTimeMillis() - questionStartTime
 
@@ -92,7 +110,7 @@ class QuizViewModel @Inject constructor(
                 id = attemptId,
                 sessionId = sessionId,
                 questionId = question.id,
-                selectedChoiceId = selectedChoiceId,
+                selectedChoiceIds = selectedChoiceIds,
                 isCorrect = isCorrect,
                 confidence = state.confidence,
                 mistakeReason = null,

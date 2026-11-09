@@ -1,6 +1,8 @@
 package jp.co.testreason.core.data
 
 import androidx.room.withTransaction
+import jp.co.testreason.core.content.BundledQuestion
+import jp.co.testreason.core.content.BundledQuestionSource
 import jp.co.testreason.core.database.AttemptEntity
 import jp.co.testreason.core.database.ChoiceEntity
 import jp.co.testreason.core.database.QuestionCompletionEntity
@@ -18,16 +20,24 @@ import jp.co.testreason.core.model.QuizSession
 import jp.co.testreason.core.model.ReviewSchedule
 import jp.co.testreason.core.model.StudyMode
 import jp.co.testreason.core.model.TimeProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 interface QuizRepository {
     fun getAllQuestions(): Flow<List<Question>>
     suspend fun getQuestionById(id: String): Question?
-    suspend fun seedInitialQuestionsIfEmpty()
+    /**
+     * Upserts bundled questions whose revision changed and retires questions that are no longer bundled.
+     * Safe to call repeatedly; the work runs once per process.
+     */
+    suspend fun syncBundledQuestions()
     suspend fun createDailySession(count: Int = 5): QuizSession
     suspend fun createDueReviewSession(): QuizSession
     suspend fun createWeaknessSession(): QuizSession
@@ -49,8 +59,14 @@ class QuizRepositoryImpl @Inject constructor(
     private val db: TestReasonDatabase,
     private val masteryRepository: MasteryRepository,
     private val spacedReviewEngine: SpacedReviewEngine,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val bundledQuestionSource: BundledQuestionSource
 ) : QuizRepository {
+
+    private val syncMutex = Mutex()
+
+    @Volatile
+    private var isSynced = false
 
     private val questionDao get() = db.questionDao()
     private val attemptDao get() = db.attemptDao()
@@ -68,15 +84,41 @@ class QuizRepositoryImpl @Inject constructor(
         return questionDao.getQuestionById(id)?.toDomain()
     }
 
-    override suspend fun seedInitialQuestionsIfEmpty() {
-        val existing = questionDao.getRandomQuestions(1)
-        if (existing.isEmpty()) {
-            questionDao.insertQuestions(SampleQuestions.getInitialQuestions().map { it.toEntity() })
+    override suspend fun syncBundledQuestions() {
+        syncMutex.withLock {
+            if (isSynced) return
+            val bundled = withContext(Dispatchers.IO) { bundledQuestionSource.load() }
+            // An empty bundle means the assets could not be read; never retire the whole bank because of it.
+            if (bundled.isNotEmpty()) {
+                applyBundle(bundled)
+            }
+            isSynced = true
+        }
+    }
+
+    private suspend fun applyBundle(bundled: List<BundledQuestion>) {
+        db.withTransaction {
+            val existing = questionDao.getQuestionRevisions().associateBy { it.id }
+            val activeBundle = bundled.filter { it.active }.map { it.question }
+            val activeIds = activeBundle.map { it.id }.toSet()
+
+            val changed = activeBundle.filter { question ->
+                val current = existing[question.id]
+                current == null || current.revision != question.revision || !current.isActive
+            }
+            if (changed.isNotEmpty()) {
+                questionDao.insertQuestions(changed.map { it.toEntity() })
+            }
+
+            val retired = existing.values.filter { it.isActive && it.id !in activeIds }.map { it.id }
+            if (retired.isNotEmpty()) {
+                questionDao.deactivateQuestions(retired)
+            }
         }
     }
 
     override suspend fun createDailySession(count: Int): QuizSession {
-        seedInitialQuestionsIfEmpty()
+        syncBundledQuestions()
         val questions = questionDao.getRandomQuestions(count)
         val session = QuizSession(
             id = "session_" + timeProvider.currentTimeMillis(),
@@ -92,7 +134,7 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createDueReviewSession(): QuizSession {
-        seedInitialQuestionsIfEmpty()
+        syncBundledQuestions()
         val dueQuestions = observeDueReviewQuestions().first()
         val session = QuizSession(
             id = "session_review_" + timeProvider.currentTimeMillis(),
@@ -108,7 +150,7 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createWeaknessSession(): QuizSession {
-        seedInitialQuestionsIfEmpty()
+        syncBundledQuestions()
         val weakQuestions = observeWeakQuestions().first()
         val sessionQuestions = if (weakQuestions.isNotEmpty()) {
             weakQuestions.take(5)
@@ -248,22 +290,31 @@ fun QuestionEntity.toDomain() = Question(
     learningObjectiveId = learningObjectiveId,
     stem = stem,
     choices = choices.map { Choice(it.id, it.text, it.isCorrect, it.distractorAnalysis) },
-    explanation = explanation
+    explanation = explanation,
+    selectCount = selectCount,
+    scenario = scenario,
+    revision = revision
 )
 
-fun Question.toEntity() = QuestionEntity(
+fun Question.toEntity(isActive: Boolean = true) = QuestionEntity(
     id = id,
     learningObjectiveId = learningObjectiveId,
     stem = stem,
     choices = choices.map { ChoiceEntity(it.id, it.text, it.isCorrect, it.distractorAnalysis) },
-    explanation = explanation
+    explanation = explanation,
+    selectCount = selectCount,
+    scenario = scenario,
+    revision = revision,
+    isActive = isActive
 )
+
+private const val CHOICE_ID_SEPARATOR = ","
 
 fun AttemptEntity.toDomain() = Attempt(
     id = id,
     sessionId = sessionId,
     questionId = questionId,
-    selectedChoiceId = selectedChoiceId,
+    selectedChoiceIds = selectedChoiceId.split(CHOICE_ID_SEPARATOR).filter { it.isNotEmpty() },
     isCorrect = isCorrect,
     confidence = confidence,
     mistakeReason = mistakeReason,
@@ -275,7 +326,7 @@ fun Attempt.toEntity() = AttemptEntity(
     id = id,
     sessionId = sessionId,
     questionId = questionId,
-    selectedChoiceId = selectedChoiceId,
+    selectedChoiceId = selectedChoiceIds.sorted().joinToString(CHOICE_ID_SEPARATOR),
     isCorrect = isCorrect,
     confidence = confidence,
     mistakeReason = mistakeReason,

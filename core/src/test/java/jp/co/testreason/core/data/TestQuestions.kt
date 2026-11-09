@@ -3,7 +3,8 @@ package jp.co.testreason.core.data
 import jp.co.testreason.core.model.Choice
 import jp.co.testreason.core.model.Question
 
-object SampleQuestions {
+/** Small fixed question set used by repository tests (not shipped). */
+object TestQuestions {
     fun getInitialQuestions(): List<Question> = listOf(
         Question(
             id = "q_fl_1_1_1",
@@ -19,7 +20,7 @@ object SampleQuestions {
         ),
         Question(
             id = "q_fl_1_2_1",
-            learningObjectiveId = "FL-1.2.1",
+            learningObjectiveId = "FL-1.3.1",
             stem = "「テストは欠陥があることしか示せない」というテストの原則の説明として適切なものはどれか。",
             choices = listOf(
                 Choice("A", "テストを実行すれば、システムに欠陥がないことを保証できる。", false, "欠陥がないことを証明することはできません。"),
@@ -55,7 +56,7 @@ object SampleQuestions {
         ),
         Question(
             id = "q_fl_3_1_1",
-            learningObjectiveId = "FL-3.1.1",
+            learningObjectiveId = "FL-3.1.2",
             stem = "静的テスト（レビューや静的解析）の長所に関する説明として、最も適切なものはどれか。",
             choices = listOf(
                 Choice("A", "コードを実行することなく、開発プロセスの早期に欠陥を発見できる。", true, "正解です。静的テストはコード実行前（動的テスト前）に早期修正を可能にします。"),
@@ -66,4 +67,8 @@ object SampleQuestions {
             explanation = "JSTQB FL 3.1: 静的テストの価値と効果に関する出題です。"
         )
     )
+}
+
+val testQuestionSource = jp.co.testreason.core.content.BundledQuestionSource {
+    TestQuestions.getInitialQuestions().map { jp.co.testreason.core.content.BundledQuestion(it, active = true) }
 }

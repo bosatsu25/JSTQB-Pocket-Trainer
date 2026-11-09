@@ -13,7 +13,7 @@ import androidx.room.TypeConverters
         ReviewScheduleEntity::class,
         QuestionCompletionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

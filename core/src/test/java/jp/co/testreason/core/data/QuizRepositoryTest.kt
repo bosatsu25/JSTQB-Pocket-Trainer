@@ -49,7 +49,8 @@ class QuizRepositoryTest {
             db = db,
             masteryRepository = fakeMasteryRepository,
             spacedReviewEngine = spacedReviewEngine,
-            timeProvider = testTimeProvider
+            timeProvider = testTimeProvider,
+            bundledQuestionSource = testQuestionSource
         )
     }
 
@@ -77,7 +78,7 @@ class QuizRepositoryTest {
             id = "att1",
             sessionId = session.id,
             questionId = firstQId,
-            selectedChoiceId = "A",
+            selectedChoiceIds = listOf("A"),
             isCorrect = false,
             confidence = ConfidenceLevel.LOW,
             mistakeReason = null,
@@ -91,7 +92,7 @@ class QuizRepositoryTest {
             id = "att2",
             sessionId = session.id,
             questionId = firstQId,
-            selectedChoiceId = "B",
+            selectedChoiceIds = listOf("B"),
             isCorrect = true,
             confidence = ConfidenceLevel.HIGH,
             mistakeReason = MistakeReason.MISREAD,
@@ -103,13 +104,13 @@ class QuizRepositoryTest {
 
         val attempts = quizRepository.getAttemptsForSession(session.id).first()
         assertEquals(1, attempts.size)
-        assertEquals("A", attempts[0].selectedChoiceId) // First choice preserved!
+        assertEquals(listOf("A"), attempts[0].selectedChoiceIds) // First choice preserved!
         assertEquals(false, attempts[0].isCorrect)
     }
 
     @Test
     fun observeDueReviewQuestions_includesDueAndNow_excludesFutureAndUnseen() = runTest {
-        quizRepository.seedInitialQuestionsIfEmpty()
+        quizRepository.syncBundledQuestions()
         // Current time: 1000000L
         val dueSchedule = ReviewScheduleEntity(
             questionId = "q_fl_1_1_1",
@@ -158,7 +159,7 @@ class QuizRepositoryTest {
             id = "att1",
             sessionId = session.id,
             questionId = firstQId,
-            selectedChoiceId = "B",
+            selectedChoiceIds = listOf("B"),
             isCorrect = true,
             confidence = ConfidenceLevel.HIGH,
             mistakeReason = null,
@@ -186,7 +187,7 @@ class QuizRepositoryTest {
             id = "att_future",
             sessionId = session.id,
             questionId = thirdQId,
-            selectedChoiceId = "A",
+            selectedChoiceIds = listOf("A"),
             isCorrect = true,
             confidence = ConfidenceLevel.HIGH,
             mistakeReason = null,
