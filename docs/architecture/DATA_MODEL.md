@@ -2,6 +2,8 @@
 
 ---
 
+Room schema version: **2** (migration 1→2 adds the question columns; see `Migrations.kt`).
+
 ## 1. Storage Boundaries & Responsibilities
 
 1. **Room Database**: Single Source of Truth for persistent domain entities:
@@ -16,18 +18,23 @@
 ## 2. Domain Entities & Value Objects
 
 ### `LearningObjective` (LO)
-- `id`: String (e.g., `"FL-1.1.1"`)
-- `chapterId`: Int
-- `title`: String
-- `description`: String
+Static master in `core/model/Syllabus.kt` (64 LOs of syllabus 2023V4.0.J02), not stored in Room.
+- `id`: String (e.g., `"FL-1.1.1"`); `section` and `chapter` are derived from it
 - `kLevel`: KLevel (K1, K2, K3)
+- `summary`: String (our own wording, see ADR-0006)
 
 ### `Question`
-- `id`: String
+Bundled as JSON in `core/src/main/assets/questions/` (format: `docs/content/AUTHORING_GUIDE.md`) and
+synchronised into Room on start-up by revision (`QuizRepository.syncBundledQuestions`).
+- `id`: String (`c{chapter}-{nnn}`, immutable)
 - `learningObjectiveId`: String
 - `stem`: String (Question body text)
+- `scenario`: String? (specification / table / code shown above the stem)
 - `choices`: List<Choice>
-- `explanation`: Explanation
+- `selectCount`: Int (1, or 2 for 「2つ選べ」; grading requires the exact correct set)
+- `explanation`: String
+- `revision`: Int (content version; a higher bundled revision overwrites the stored row)
+- `isActive` (Room only): retired questions are kept for attempt history but never served
 
 ### `Choice`
 - `id`: String (e.g., `"A"`, `"B"`, `"C"`, `"D"`)
@@ -39,7 +46,7 @@
 - `id`: String
 - `sessionId`: String
 - `questionId`: String
-- `selectedChoiceId`: String
+- `selectedChoiceIds`: List<String> (Room column `selectedChoiceId` stores them sorted and comma-joined)
 - `isCorrect`: Boolean
 - `confidence`: ConfidenceLevel? (`GUESS`, `LOW`, `MEDIUM`, `HIGH`, or `null`/`UNSPECIFIED`)
 - `mistakeReason`: MistakeReason? (`CONCEPT`, `TERMINOLOGY`, `MISREAD`, `CARELESS`, or `null`)
