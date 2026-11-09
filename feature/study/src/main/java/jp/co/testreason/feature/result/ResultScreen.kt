@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -19,9 +20,18 @@ import androidx.compose.ui.unit.dp
 fun ResultScreen(
     viewModel: ResultViewModel,
     onNavigateHome: () -> Unit,
+    onStartQuiz: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is ResultUiEvent.NavigateToQuiz -> onStartQuiz(event.sessionId)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -84,16 +94,26 @@ fun ResultScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = uiState.recommendedNextAction,
+                        text = uiState.recommendedAction.description,
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = { viewModel.startRecommendedSession() },
+                        enabled = !uiState.isStarting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(uiState.recommendedAction.buttonLabel)
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Action Buttons
-            Button(
+            OutlinedButton(
                 onClick = onNavigateHome,
                 modifier = Modifier
                     .fillMaxWidth()

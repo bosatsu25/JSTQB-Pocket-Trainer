@@ -112,9 +112,10 @@ fun ReviewScreen(
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
-                                    AssistChip(
-                                        onClick = { },
-                                        label = { Text(question.learningObjectiveId) }
+                                    Text(
+                                        text = question.learningObjectiveId,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(

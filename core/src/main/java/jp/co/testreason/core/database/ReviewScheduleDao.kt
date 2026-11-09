@@ -8,14 +8,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReviewScheduleDao {
-    @Query("SELECT * FROM review_schedules WHERE nextReviewAt <= :now ORDER BY nextReviewAt ASC, questionId ASC")
-    fun getDueReviewSchedules(now: Long): Flow<List<ReviewScheduleEntity>>
-
     @Query("SELECT * FROM review_schedules WHERE questionId = :questionId")
     suspend fun getSchedule(questionId: String): ReviewScheduleEntity?
 
     @Query("SELECT * FROM review_schedules")
     fun getAllSchedules(): Flow<List<ReviewScheduleEntity>>
+
+    @Query("SELECT * FROM review_schedules ORDER BY nextReviewAt ASC, questionId ASC")
+    fun getAllSchedulesOrdered(): Flow<List<ReviewScheduleEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateSchedule(schedule: ReviewScheduleEntity)

@@ -54,4 +54,33 @@ class SpacedReviewEngineTest {
         assertEquals(7, schedule.intervalDays)
         assertEquals(1000000L + 7 * 86400000L, schedule.nextReviewAt)
     }
+
+    private fun answer(correct: Boolean, confidence: ConfidenceLevel?, reason: MistakeReason? = null) =
+        Attempt("a", "s", "q", listOf("A"), correct, confidence, reason, 1_000L, 1_000_000L)
+
+    @Test
+    fun consecutiveConfidentCorrectAnswers_growTheIntervalUpToTheCap() {
+        var previous: jp.co.testreason.core.model.ReviewSchedule? = null
+        val intervals = (1..6).map {
+            engine.calculateSchedule(answer(true, ConfidenceLevel.HIGH), previous).also { previous = it }.intervalDays
+        }
+        assertEquals(listOf(7, 18, 45, 60, 60, 60), intervals)
+    }
+
+    @Test
+    fun unspecifiedConfidence_growsSlowerThanHigh() {
+        val first = engine.calculateSchedule(answer(true, null))
+        val second = engine.calculateSchedule(answer(true, null), first)
+        assertEquals(1, first.intervalDays)
+        assertEquals(2, second.intervalDays)
+    }
+
+    @Test
+    fun missOrGuess_resetsTheIntervalWhateverThePrevious() {
+        val long = engine.calculateSchedule(answer(true, ConfidenceLevel.HIGH), null).copy(intervalDays = 45)
+        assertEquals(1, engine.calculateSchedule(answer(false, ConfidenceLevel.HIGH), long).intervalDays)
+        assertEquals(3, engine.calculateSchedule(answer(false, ConfidenceLevel.HIGH, MistakeReason.CARELESS), long).intervalDays)
+        assertEquals(2, engine.calculateSchedule(answer(false, ConfidenceLevel.HIGH, MistakeReason.MISREAD), long).intervalDays)
+        assertEquals(1, engine.calculateSchedule(answer(true, ConfidenceLevel.GUESS), long).intervalDays)
+    }
 }

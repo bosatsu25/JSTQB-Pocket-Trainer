@@ -52,7 +52,8 @@ class ReviewViewModel @Inject constructor(
 
     fun startDueReviewSession() {
         viewModelScope.launch {
-            val session = quizRepository.createDueReviewSession()
+            // The queue may have emptied since it was displayed; then there is nothing to start.
+            val session = quizRepository.createDueReviewSession() ?: return@launch
             _events.emit(ReviewUiEvent.NavigateToQuiz(session.id))
         }
     }

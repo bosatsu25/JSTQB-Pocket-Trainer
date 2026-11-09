@@ -9,6 +9,7 @@ import jp.co.testreason.core.model.Attempt
 import jp.co.testreason.core.model.ConfidenceLevel
 import jp.co.testreason.core.model.Question
 import jp.co.testreason.core.model.QuizSession
+import jp.co.testreason.core.model.TimeProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -38,6 +39,7 @@ sealed interface QuizUiEvent {
 @HiltViewModel
 class QuizViewModel @Inject constructor(
     private val quizRepository: QuizRepository,
+    private val timeProvider: TimeProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -49,7 +51,7 @@ class QuizViewModel @Inject constructor(
     private val _events = MutableSharedFlow<QuizUiEvent>()
     val events: SharedFlow<QuizUiEvent> = _events.asSharedFlow()
 
-    private var questionStartTime: Long = System.currentTimeMillis()
+    private var questionStartTime: Long = timeProvider.currentTimeMillis()
 
     init {
         loadSession()
@@ -61,7 +63,7 @@ class QuizViewModel @Inject constructor(
             if (session != null && session.currentQuestionIndex < session.questionIds.size) {
                 val qId = session.questionIds[session.currentQuestionIndex]
                 val question = quizRepository.getQuestionById(qId)
-                questionStartTime = System.currentTimeMillis()
+                questionStartTime = timeProvider.currentTimeMillis()
                 _uiState.value = QuizUiState(
                     session = session,
                     currentQuestion = question,
@@ -103,8 +105,9 @@ class QuizViewModel @Inject constructor(
 
         viewModelScope.launch {
             val isCorrect = question.isCorrectSelection(selectedChoiceIds)
-            val attemptId = "attempt_" + System.currentTimeMillis()
-            val timeSpent = System.currentTimeMillis() - questionStartTime
+            val now = timeProvider.currentTimeMillis()
+            val attemptId = "attempt_$now"
+            val timeSpent = now - questionStartTime
 
             val attempt = Attempt(
                 id = attemptId,
@@ -115,7 +118,7 @@ class QuizViewModel @Inject constructor(
                 confidence = state.confidence,
                 mistakeReason = null,
                 timeSpentMs = timeSpent,
-                timestamp = System.currentTimeMillis()
+                timestamp = now
             )
 
             quizRepository.finalizeAttempt(attempt)

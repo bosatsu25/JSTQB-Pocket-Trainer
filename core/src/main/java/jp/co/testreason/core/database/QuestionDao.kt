@@ -20,6 +20,12 @@ interface QuestionDao {
     @Query("SELECT * FROM questions WHERE isActive = 1 ORDER BY RANDOM() LIMIT :limit")
     suspend fun getRandomQuestions(limit: Int): List<QuestionEntity>
 
+    @Query(
+        "SELECT * FROM questions WHERE isActive = 1 AND id NOT IN (SELECT questionId FROM attempts) " +
+            "ORDER BY RANDOM() LIMIT :limit"
+    )
+    suspend fun getUnseenQuestions(limit: Int): List<QuestionEntity>
+
     @Query("SELECT id, revision, isActive FROM questions")
     suspend fun getQuestionRevisions(): List<QuestionRevision>
 

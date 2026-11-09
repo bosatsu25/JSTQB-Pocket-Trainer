@@ -55,7 +55,7 @@ class RepositoryRollbackTest {
 
     @Test
     fun finalizeAttempt_rollbackRevertsAttemptWhenScheduleFails() = runTest {
-        val session = quizRepository.createDailySession(5)
+        val session = checkNotNull(quizRepository.createDailySession(5))
         val firstQId = session.questionIds[0]
 
         // Inject SQLite trigger to force failure during ReviewSchedule insertion
@@ -99,7 +99,7 @@ class RepositoryRollbackTest {
 
     @Test
     fun completeQuestion_rollbackRevertsCompletionAndSessionIndexWhenSessionUpdateFails() = runTest {
-        val session = quizRepository.createDailySession(5)
+        val session = checkNotNull(quizRepository.createDailySession(5))
         val firstQId = session.questionIds[0]
 
         val attempt = Attempt(
