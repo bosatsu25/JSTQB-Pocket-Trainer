@@ -96,7 +96,10 @@ fun TestReasonNavHost(
 
         composable<Screen.AnalyticsRoute> {
             val viewModel: AnalyticsViewModel = hiltViewModel()
-            AnalyticsScreen(viewModel = viewModel)
+            AnalyticsScreen(
+                viewModel = viewModel,
+                onStartQuiz = { sessionId -> navController.navigate(Screen.QuizRoute(sessionId)) }
+            )
         }
 
         composable<Screen.QuizRoute> { backStackEntry ->

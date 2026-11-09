@@ -5,7 +5,10 @@ import jp.co.testreason.core.model.Choice
 import jp.co.testreason.core.model.ConfidenceLevel
 import jp.co.testreason.core.model.Question
 import jp.co.testreason.core.model.QuizSession
+import jp.co.testreason.core.model.Mastery
+import jp.co.testreason.core.model.MistakeReason
 import jp.co.testreason.core.model.StudyMode
+import jp.co.testreason.feature.analytics.buildDashboard
 import jp.co.testreason.feature.result.ConfidenceRow
 import jp.co.testreason.feature.result.ObjectiveResult
 import jp.co.testreason.feature.result.SessionSummary
@@ -49,4 +52,16 @@ object ScreenFixtures {
             ObjectiveResult("FL-4.2.4", "状態遷移テストの適用")
         )
     )
+
+    /** Dashboard with every section filled: a weak K3 LO, tagged and untagged misses. */
+    val dashboard = buildDashboard(
+        questions = listOf(scenarioQuestion, scenarioQuestion.copy(id = "c1-001", learningObjectiveId = "FL-1.1.1")),
+        attempts = listOf(
+            wrongAttempt.copy(mistakeReason = MistakeReason.TERMINOLOGY),
+            wrongAttempt.copy(id = "a2", sessionId = "s2"),
+            wrongAttempt.copy(id = "a3", sessionId = "s3", questionId = "c1-001", isCorrect = true)
+        ),
+        masteries = listOf(Mastery("FL-4.2.2", 0.5f, 0L, 2, 1), Mastery("FL-1.1.1", 1f, 0L, 3, 3))
+    )
 }
+

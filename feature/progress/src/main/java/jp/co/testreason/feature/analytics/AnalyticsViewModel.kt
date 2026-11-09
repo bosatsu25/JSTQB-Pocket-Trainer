@@ -4,12 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jp.co.testreason.core.data.MasteryRepository
+import jp.co.testreason.core.data.QuizRepository
 import jp.co.testreason.core.model.Mastery
 import jp.co.testreason.core.model.Syllabus
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ChapterProgress(
@@ -19,25 +25,57 @@ data class ChapterProgress(
     val answeredObjectives: Int,
     val totalObjectives: Int,
     /** Average mastery of the answered LOs of this chapter, or null when none is answered yet. */
-    val averageMastery: Float?
+    val averageMastery: Float?,
+    val objectives: List<ObjectiveStatus> = emptyList()
 )
 
 data class AnalyticsUiState(
-    val chapters: List<ChapterProgress> = emptyList()
+    val chapters: List<ChapterProgress> = emptyList(),
+    val kLevels: List<KLevelAccuracy> = emptyList(),
+    val mistakes: List<MistakeCount> = emptyList(),
+    val isStarting: Boolean = false
 )
 
-/** Chapter-level progress. The full LO dashboard (K-levels, heatmap, mistake tags) is issue #18. */
+sealed interface AnalyticsEvent {
+    data class NavigateToQuiz(val sessionId: String) : AnalyticsEvent
+}
+
 @HiltViewModel
 class AnalyticsViewModel @Inject constructor(
+    private val quizRepository: QuizRepository,
     masteryRepository: MasteryRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<AnalyticsUiState> = masteryRepository.getAllMasteries()
-        .map { AnalyticsUiState(chapterProgress(it)) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), AnalyticsUiState(chapterProgress(emptyList())))
+    private val _uiState = MutableStateFlow(buildDashboard(emptyList(), emptyList(), emptyList()))
+    val uiState: StateFlow<AnalyticsUiState> = _uiState.asStateFlow()
+
+    private val _events = MutableSharedFlow<AnalyticsEvent>()
+    val events: SharedFlow<AnalyticsEvent> = _events.asSharedFlow()
+
+    init {
+        viewModelScope.launch {
+            combine(
+                quizRepository.getAllQuestions(),
+                quizRepository.observeAllAttempts(),
+                masteryRepository.getAllMasteries(),
+                ::buildDashboard
+            ).collect { dashboard -> _uiState.update { dashboard.copy(isStarting = it.isStarting) } }
+        }
+    }
+
+    /** Starts a short session on one LO, typically a weak one. */
+    fun startObjective(learningObjectiveId: String) {
+        if (_uiState.value.isStarting) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isStarting = true) }
+            val session = quizRepository.createLearningObjectiveSession(learningObjectiveId, OBJECTIVE_SESSION_SIZE)
+            _uiState.update { it.copy(isStarting = false) }
+            if (session != null) _events.emit(AnalyticsEvent.NavigateToQuiz(session.id))
+        }
+    }
 
     private companion object {
-        const val STOP_TIMEOUT_MS = 5_000L
+        const val OBJECTIVE_SESSION_SIZE = 5
     }
 }
 

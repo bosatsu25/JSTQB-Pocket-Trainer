@@ -174,3 +174,34 @@ class ChapterSessionTest {
         assertNull(repository.createChapterSession(6, count = 5))
     }
 }
+
+/** Issue #18: sessions for one learning objective. */
+@RunWith(RobolectricTestRunner::class)
+class LearningObjectiveSessionTest {
+
+    private lateinit var db: TestReasonDatabase
+    private lateinit var repository: QuizRepository
+    private val time = MutableTimeProvider(1_000_000L)
+
+    @Before
+    fun setUp() {
+        db = Room.inMemoryDatabaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            TestReasonDatabase::class.java
+        ).allowMainThreadQueries().build()
+        repository = QuizRepositoryImpl(db, FakeMasteryRepository(), SpacedReviewEngine(time), time, testQuestionSource)
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
+    }
+
+    @Test
+    fun loSession_containsOnlyThatObjective() = runTest {
+        val session = checkNotNull(repository.createLearningObjectiveSession("FL-1.3.1", count = 5))
+        assertEquals(listOf("q_fl_1_2_1"), session.questionIds)
+        assertEquals(StudyMode.CUSTOM, session.mode)
+        assertNull(repository.createLearningObjectiveSession("FL-6.2.1", count = 5))
+    }
+}

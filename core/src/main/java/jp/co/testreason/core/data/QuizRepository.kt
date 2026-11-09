@@ -59,6 +59,9 @@ interface QuizRepository {
      */
     suspend fun createChapterSession(chapter: Int, count: Int?): QuizSession?
 
+    /** Up to [count] questions of one learning objective, in the same priority order as chapter sessions. */
+    suspend fun createLearningObjectiveSession(learningObjectiveId: String, count: Int): QuizSession?
+
     suspend fun getSessionById(id: String): QuizSession?
     fun getActiveSession(): Flow<QuizSession?>
     
@@ -173,6 +176,12 @@ class QuizRepositoryImpl @Inject constructor(
         syncBundledQuestions()
         val questions = questionDao.getActiveQuestionsByLoPrefix("FL-$chapter.").map { it.id }
         return createSession(StudyMode.CHAPTER, prioritise(questions).let { if (count != null) it.take(count) else it })
+    }
+
+    override suspend fun createLearningObjectiveSession(learningObjectiveId: String, count: Int): QuizSession? {
+        syncBundledQuestions()
+        val questions = questionDao.getActiveQuestionsByLo(learningObjectiveId).map { it.id }
+        return createSession(StudyMode.CUSTOM, prioritise(questions).take(count))
     }
 
     /** Unseen (shuffled) -> weak (oldest answer first) -> others (oldest answer first). */

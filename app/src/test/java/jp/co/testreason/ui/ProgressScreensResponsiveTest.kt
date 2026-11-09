@@ -5,10 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
-import jp.co.testreason.core.model.Mastery
 import jp.co.testreason.feature.analytics.AnalyticsContent
-import jp.co.testreason.feature.analytics.AnalyticsUiState
-import jp.co.testreason.feature.analytics.chapterProgress
 import jp.co.testreason.feature.review.ReviewContent
 import jp.co.testreason.feature.review.ReviewUiState
 import org.junit.Rule
@@ -53,10 +50,13 @@ class ProgressScreensResponsiveTest(private val device: TestDevice) {
     @Test
     fun analytics() {
         val host = compose.setResponsiveContent(device) {
-            AnalyticsContent(uiState = AnalyticsUiState(chapterProgress(listOf(Mastery("FL-4.2.1", 0.5f, 0L, 2, 1)))))
+            AnalyticsContent(uiState = ScreenFixtures.dashboard)
         }
         compose.assertNoHorizontalOverflow()
         compose.assertTouchTargetsAtLeast48dp(host)
+        compose.onNodeWithText("K3（適用）", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("用語の混同：1回").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("弱点 50%").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("第6章 テストツール").performScrollTo().assertIsDisplayed()
     }
 
