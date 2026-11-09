@@ -42,6 +42,7 @@ data class HomeActions(
     val onResume: () -> Unit = {},
     val onOpenReview: () -> Unit = {},
     val onStartWeakness: () -> Unit = {},
+    val onOpenChapters: () -> Unit = {},
     val onOpenAnalytics: () -> Unit = {}
 )
 
@@ -50,6 +51,7 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onStartQuiz: (String) -> Unit,
     onOpenReview: () -> Unit,
+    onOpenChapters: () -> Unit,
     onOpenAnalytics: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -72,6 +74,7 @@ fun HomeScreen(
             onResume = viewModel::resumeSession,
             onOpenReview = onOpenReview,
             onStartWeakness = viewModel::startWeaknessReview,
+            onOpenChapters = onOpenChapters,
             onOpenAnalytics = onOpenAnalytics
         ),
         snackbarHostState = snackbarHostState,
@@ -106,6 +109,7 @@ fun HomeContent(
             ) {
                 QuickAction("今日の復習", "${uiState.dueReviewCount}問", actions.onOpenReview)
                 QuickAction("弱点克服", "${uiState.weakQuestionCount}問", actions.onStartWeakness)
+                QuickAction("章別学習", "全6章", actions.onOpenChapters)
                 QuickAction("学習分析", "学習目的別", actions.onOpenAnalytics)
             }
         }

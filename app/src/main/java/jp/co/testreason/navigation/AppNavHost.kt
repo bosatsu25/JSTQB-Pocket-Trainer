@@ -10,6 +10,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import jp.co.testreason.feature.analytics.AnalyticsScreen
 import jp.co.testreason.feature.analytics.AnalyticsViewModel
+import jp.co.testreason.feature.chapter.ChapterSelectScreen
+import jp.co.testreason.feature.chapter.ChapterSelectViewModel
 import jp.co.testreason.feature.explanation.ExplanationScreen
 import jp.co.testreason.feature.explanation.ExplanationViewModel
 import jp.co.testreason.feature.home.HomeScreen
@@ -44,6 +46,9 @@ sealed interface Screen {
 
     @Serializable
     object AnalyticsRoute : Screen
+
+    @Serializable
+    object ChapterSelectRoute : Screen
 }
 
 @Composable
@@ -64,6 +69,7 @@ fun TestReasonNavHost(
                     navController.navigate(Screen.QuizRoute(sessionId))
                 },
                 onOpenReview = { navController.navigate(Screen.ReviewRoute) },
+                onOpenChapters = { navController.navigate(Screen.ChapterSelectRoute) },
                 onOpenAnalytics = { navController.navigate(Screen.AnalyticsRoute) }
             )
         }
@@ -77,6 +83,14 @@ fun TestReasonNavHost(
                         popUpTo<Screen.ReviewRoute> { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable<Screen.ChapterSelectRoute> {
+            val viewModel: ChapterSelectViewModel = hiltViewModel()
+            ChapterSelectScreen(
+                viewModel = viewModel,
+                onStartQuiz = { sessionId -> navController.navigate(Screen.QuizRoute(sessionId)) }
             )
         }
 

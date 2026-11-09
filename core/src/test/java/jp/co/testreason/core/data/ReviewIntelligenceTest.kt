@@ -9,6 +9,7 @@ import jp.co.testreason.core.domain.SpacedReviewEngine
 import jp.co.testreason.core.model.Attempt
 import jp.co.testreason.core.model.ConfidenceLevel
 import jp.co.testreason.core.model.MistakeReason
+import jp.co.testreason.core.model.StudyMode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -123,5 +124,53 @@ class ReviewIntelligenceTest {
     private companion object {
         const val NOW = 10_000_000L
         const val DAY = 24 * 3600 * 1000L
+    }
+}
+
+/** Issue #17: chapter sessions. */
+@RunWith(RobolectricTestRunner::class)
+class ChapterSessionTest {
+
+    private lateinit var db: TestReasonDatabase
+    private lateinit var repository: QuizRepository
+    private val time = MutableTimeProvider(1_000_000L)
+
+    @Before
+    fun setUp() = runTest {
+        db = Room.inMemoryDatabaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            TestReasonDatabase::class.java
+        ).allowMainThreadQueries().build()
+        repository = QuizRepositoryImpl(db, FakeMasteryRepository(), SpacedReviewEngine(time), time, testQuestionSource)
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
+    }
+
+    private suspend fun answer(questionId: String, correct: Boolean, at: Long) {
+        db.attemptDao().insertAttemptIgnore(AttemptEntity("a_$questionId", "s0", questionId, "A", correct, ConfidenceLevel.HIGH, null, 1L, at))
+    }
+
+    @Test
+    fun chapterSession_containsOnlyThatChapter_unseenThenWeakThenOldest() = runTest {
+        // Test fixture chapter 1: q_fl_1_1_1 (FL-1.1.1) and q_fl_1_2_1 (FL-1.3.1); chapter 2: q_fl_2_1_1, q_fl_2_2_1.
+        answer("q_fl_2_1_1", correct = true, at = 10L)
+
+        val chapter2 = checkNotNull(repository.createChapterSession(2, count = null))
+        assertEquals(StudyMode.CHAPTER, chapter2.mode)
+        assertEquals(listOf("q_fl_2_2_1", "q_fl_2_1_1"), chapter2.questionIds)
+
+        answer("q_fl_1_1_1", correct = true, at = 20L)
+        answer("q_fl_1_2_1", correct = false, at = 30L)
+        val chapter1 = checkNotNull(repository.createChapterSession(1, count = null))
+        assertEquals(listOf("q_fl_1_2_1", "q_fl_1_1_1"), chapter1.questionIds)
+    }
+
+    @Test
+    fun chapterSession_respectsCountAndEmptyChapters() = runTest {
+        assertEquals(1, checkNotNull(repository.createChapterSession(1, count = 1)).questionIds.size)
+        assertNull(repository.createChapterSession(6, count = 5))
     }
 }

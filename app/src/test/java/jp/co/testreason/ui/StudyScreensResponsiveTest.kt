@@ -3,8 +3,13 @@ package jp.co.testreason.ui
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import jp.co.testreason.feature.chapter.ChapterSelectContent
+import jp.co.testreason.feature.chapter.ChapterSelectUiState
+import jp.co.testreason.feature.chapter.chapterOverview
 import jp.co.testreason.feature.explanation.ExplanationContent
 import jp.co.testreason.feature.explanation.ExplanationUiState
 import jp.co.testreason.feature.home.HomeActions
@@ -43,7 +48,7 @@ class StudyScreensResponsiveTest(private val device: TestDevice) {
         }
         compose.assertNoHorizontalOverflow()
         compose.assertTouchTargetsAtLeast48dp(host)
-        listOf("続きから再開", "今日のおすすめを開始", "今日の復習", "弱点克服", "学習分析").forEach {
+        listOf("続きから再開", "今日のおすすめを開始", "今日の復習", "弱点克服", "章別学習", "学習分析").forEach {
             compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()
         }
     }
@@ -118,6 +123,23 @@ class StudyScreensResponsiveTest(private val device: TestDevice) {
         compose.onNodeWithText("復習が必要な学習目的").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(RecommendedAction.WEAKNESS.buttonLabel).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("ホームへ戻る").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun chapterSelect() {
+        val host = compose.setResponsiveContent(device) {
+            ChapterSelectContent(
+                uiState = ChapterSelectUiState(
+                    chapters = chapterOverview(emptyList(), emptyList(), emptyList())
+                        .map { it.copy(questionCount = 63, unseenCount = 40, mastery = 0.55f) }
+                ),
+                onStartChapter = { _, _ -> }
+            )
+        }
+        compose.assertNoHorizontalOverflow()
+        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.onNodeWithText("第5章 テスト活動のマネジメント").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("全63問").onLast().performScrollTo().assertIsDisplayed()
     }
 
     companion object {

@@ -53,6 +53,12 @@ interface QuizRepository {
 
     /** Returns null when there is no weak question, instead of creating an empty session. */
     suspend fun createWeaknessSession(): QuizSession?
+    /**
+     * Questions of one syllabus chapter: never answered first, then weak ones (oldest first), then the rest
+     * (least recently answered first). [count] null means the whole chapter. Returns null for an empty chapter.
+     */
+    suspend fun createChapterSession(chapter: Int, count: Int?): QuizSession?
+
     suspend fun getSessionById(id: String): QuizSession?
     fun getActiveSession(): Flow<QuizSession?>
     
@@ -61,6 +67,9 @@ interface QuizRepository {
     suspend fun updateMistakeReason(sessionId: String, questionId: String, mistakeReason: MistakeReason)
     
     fun getAttemptsForSession(sessionId: String): Flow<List<Attempt>>
+
+    /** Every answer ever given (for progress analytics). */
+    fun observeAllAttempts(): Flow<List<Attempt>>
     /** Questions whose review is due now; re-evaluated as the clock moves, not only when data changes. */
     fun observeDueReviewQuestions(): Flow<List<Question>>
 
@@ -160,6 +169,25 @@ class QuizRepositoryImpl @Inject constructor(
         return createSession(StudyMode.WEAKNESS, observeWeakQuestions().first().take(WEAKNESS_SESSION_SIZE).map { it.id })
     }
 
+    override suspend fun createChapterSession(chapter: Int, count: Int?): QuizSession? {
+        syncBundledQuestions()
+        val questions = questionDao.getActiveQuestionsByLoPrefix("FL-$chapter.").map { it.id }
+        return createSession(StudyMode.CHAPTER, prioritise(questions).let { if (count != null) it.take(count) else it })
+    }
+
+    /** Unseen (shuffled) -> weak (oldest answer first) -> others (oldest answer first). */
+    private suspend fun prioritise(questionIds: List<String>): List<String> {
+        val latest = attemptDao.getLatestAttemptPerQuestion().first()
+            .groupBy { it.questionId }
+            .mapValues { (_, attempts) -> attempts.maxBy { it.timestamp } }
+        val (seen, unseen) = questionIds.partition { it in latest }
+        val (weak, others) = seen.sortedBy { latest.getValue(it).timestamp }.partition { id ->
+            val attempt = latest.getValue(id)
+            !attempt.isCorrect || attempt.confidence == ConfidenceLevel.GUESS || attempt.confidence == ConfidenceLevel.LOW
+        }
+        return unseen.shuffled() + weak + others
+    }
+
     private suspend fun createSession(mode: StudyMode, questionIds: List<String>): QuizSession? {
         if (questionIds.isEmpty()) return null
         val now = timeProvider.currentTimeMillis()
@@ -223,6 +251,9 @@ class QuizRepositoryImpl @Inject constructor(
             entities.map { it.toDomain() }
         }
     }
+
+    override fun observeAllAttempts(): Flow<List<Attempt>> =
+        attemptDao.getAllAttempts().map { entities -> entities.map { it.toDomain() } }
 
     override fun observeDueReviewQuestions(): Flow<List<Question>> =
         combine(reviewScheduleDao.getAllSchedulesOrdered(), clockTicks()) { schedules, _ ->

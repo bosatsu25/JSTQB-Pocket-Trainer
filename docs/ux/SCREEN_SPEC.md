@@ -12,8 +12,17 @@
 5. **Learning Menu**:
    - 今日の復習 (due count) → Review screen
    - 弱点克服 (weak count) → starts a weakness session, or a message when there is none
-   - 学習分析 → chapter-level progress (full LO dashboard: #18)
-   - Chapter Study (#17) and Mock Exam (#19) are added when implemented; no placeholder buttons.
+   - 章別学習 → Chapter Select screen
+   - 学習分析 → learning analytics
+   - Mock Exam (#19) is added when implemented; no placeholder buttons.
+   - The menu wraps (FlowRow) on narrow screens or large fonts.
+
+---
+
+## 1b. Chapter Select Screen (`ChapterSelectScreen`)
+- One card per syllabus chapter: title, question count, unseen count, mastery (or 未着手).
+- Count buttons: 5問 / 10問 (when the chapter has more) / 全N問. Questions are ordered unseen → weak
+  (oldest first) → others (least recently answered first).
 
 ---
 

@@ -26,6 +26,9 @@ interface QuestionDao {
     )
     suspend fun getUnseenQuestions(limit: Int): List<QuestionEntity>
 
+    @Query("SELECT * FROM questions WHERE isActive = 1 AND learningObjectiveId LIKE :loPrefix || '%'")
+    suspend fun getActiveQuestionsByLoPrefix(loPrefix: String): List<QuestionEntity>
+
     @Query("SELECT id, revision, isActive FROM questions")
     suspend fun getQuestionRevisions(): List<QuestionRevision>
 
