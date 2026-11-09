@@ -1,14 +1,10 @@
 package jp.co.testreason.feature.analytics
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,27 +20,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import jp.co.testreason.core.ui.components.ResponsiveScreenColumn
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnalyticsScreen(
     viewModel: AnalyticsViewModel,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    AnalyticsContent(uiState = uiState, modifier = modifier)
+}
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("学習分析（章別）") }) },
-        modifier = modifier
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(uiState.chapters, key = { it.chapter }) { chapter -> ChapterCard(chapter) }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AnalyticsContent(uiState: AnalyticsUiState, modifier: Modifier = Modifier) {
+    Scaffold(topBar = { TopAppBar(title = { Text("学習分析") }) }, modifier = modifier) { padding ->
+        ResponsiveScreenColumn(contentPadding = padding) {
+            uiState.chapters.forEach { chapter -> ChapterCard(chapter) }
         }
     }
 }

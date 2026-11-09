@@ -2,17 +2,16 @@ package jp.co.testreason.feature.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,8 +33,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import jp.co.testreason.core.model.QuizSession
+import jp.co.testreason.core.ui.components.ResponsiveScreenColumn
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Navigation and actions available from Home. */
+data class HomeActions(
+    val onStartDaily: () -> Unit = {},
+    val onResume: () -> Unit = {},
+    val onOpenReview: () -> Unit = {},
+    val onStartWeakness: () -> Unit = {},
+    val onOpenAnalytics: () -> Unit = {}
+)
+
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
@@ -56,61 +65,48 @@ fun HomeScreen(
         }
     }
 
+    HomeContent(
+        uiState = uiState,
+        actions = HomeActions(
+            onStartDaily = viewModel::startDailyQuiz,
+            onResume = viewModel::resumeSession,
+            onOpenReview = onOpenReview,
+            onStartWeakness = viewModel::startWeaknessReview,
+            onOpenAnalytics = onOpenAnalytics
+        ),
+        snackbarHostState = snackbarHostState,
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun HomeContent(
+    uiState: HomeUiState,
+    actions: HomeActions,
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
+) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("TestReason") }) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        ResponsiveScreenColumn(contentPadding = padding) {
             MasteryCard(uiState.averageMastery)
-
-            uiState.resumableSession?.let { session ->
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text("学習の続き", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            text = "${session.currentQuestionIndex} / ${session.questionIds.size} 問 回答済み",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = { viewModel.resumeSession() },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                        ) { Text("続きから再開") }
-                    }
-                }
-            }
-
-            DailyCard(isLoading = uiState.isLoading, onStart = { viewModel.startDailyQuiz() })
+            uiState.resumableSession?.let { ResumeCard(it, actions.onResume) }
+            DailyCard(isLoading = uiState.isLoading, onStart = actions.onStartDaily)
 
             Text("学習メニュー", style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                QuickAction(
-                    label = "今日の復習",
-                    detail = "${uiState.dueReviewCount}問",
-                    onClick = onOpenReview,
-                    modifier = Modifier.weight(1f)
-                )
-                QuickAction(
-                    label = "弱点克服",
-                    detail = "${uiState.weakQuestionCount}問",
-                    onClick = { viewModel.startWeaknessReview() },
-                    modifier = Modifier.weight(1f)
-                )
-                QuickAction(
-                    label = "学習分析",
-                    detail = "章別",
-                    onClick = onOpenAnalytics,
-                    modifier = Modifier.weight(1f)
-                )
+            // Wraps to as many rows as the width needs instead of squeezing the buttons.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                QuickAction("今日の復習", "${uiState.dueReviewCount}問", actions.onOpenReview)
+                QuickAction("弱点克服", "${uiState.weakQuestionCount}問", actions.onStartWeakness)
+                QuickAction("学習分析", "学習目的別", actions.onOpenAnalytics)
             }
         }
     }
@@ -134,6 +130,24 @@ private fun MasteryCard(averageMastery: Float) {
 }
 
 @Composable
+private fun ResumeCard(session: QuizSession, onResume: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text("学習の続き", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "${session.currentQuestionIndex} / ${session.questionIds.size} 問 回答済み",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(onClick = onResume, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text("続きから再開")
+            }
+        }
+    }
+}
+
+@Composable
 private fun DailyCard(isLoading: Boolean, onStart: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -151,7 +165,7 @@ private fun DailyCard(isLoading: Boolean, onStart: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onStart,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 enabled = !isLoading,
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -166,10 +180,10 @@ private fun DailyCard(isLoading: Boolean, onStart: () -> Unit) {
 }
 
 @Composable
-private fun QuickAction(label: String, detail: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun QuickAction(label: String, detail: String, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 72.dp),
+        modifier = Modifier.widthIn(min = 132.dp).heightIn(min = 72.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column {

@@ -41,7 +41,7 @@ class AnalyticsViewModel @Inject constructor(
     }
 }
 
-internal fun chapterProgress(masteries: List<Mastery>): List<ChapterProgress> {
+fun chapterProgress(masteries: List<Mastery>): List<ChapterProgress> {
     val byLo = masteries.associateBy { it.learningObjectiveId }
     return Syllabus.chapters.map { chapter ->
         val los = Syllabus.learningObjectivesOf(chapter.number)
