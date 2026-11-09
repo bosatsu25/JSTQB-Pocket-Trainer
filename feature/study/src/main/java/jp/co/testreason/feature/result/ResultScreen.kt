@@ -1,5 +1,6 @@
 package jp.co.testreason.feature.result
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import jp.co.testreason.core.model.ConfidenceLevel
 import jp.co.testreason.core.ui.components.ResponsiveScreenColumn
 
 @Composable
@@ -76,6 +78,8 @@ fun ResultContent(
                 }
             }
 
+            SummaryCard(uiState.summary)
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -107,3 +111,41 @@ fun ResultContent(
         }
     }
 }
+
+@Composable
+private fun SummaryCard(summary: SessionSummary) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("ふりかえり", style = MaterialTheme.typography.titleMedium)
+            Text("所要時間 ${summary.totalTimeText}", style = MaterialTheme.typography.bodyMedium)
+
+            if (summary.confidenceRows.isNotEmpty()) {
+                Text("確信度と正誤", style = MaterialTheme.typography.labelLarge)
+                summary.confidenceRows.forEach { row ->
+                    Text("${row.label}：正解 ${row.correct} ／ 不正解 ${row.incorrect}", style = MaterialTheme.typography.bodyMedium)
+                }
+                val luckyGuesses = summary.confidenceRows
+                    .filter { it.confidence == ConfidenceLevel.GUESS || it.confidence == ConfidenceLevel.LOW }
+                    .sumOf { it.correct }
+                if (luckyGuesses > 0) {
+                    Text(
+                        text = "自信なしで正解した $luckyGuesses 問は、理解を固めるため早めに復習に入ります。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            ObjectiveList("身についた学習目的", summary.strongObjectives)
+            ObjectiveList("復習が必要な学習目的", summary.reviewObjectives)
+        }
+    }
+}
+
+@Composable
+private fun ObjectiveList(title: String, objectives: List<ObjectiveResult>) {
+    if (objectives.isEmpty()) return
+    Text(title, style = MaterialTheme.typography.labelLarge)
+    objectives.forEach { Text("${it.id} ${it.summary}", style = MaterialTheme.typography.bodyMedium) }
+}
+

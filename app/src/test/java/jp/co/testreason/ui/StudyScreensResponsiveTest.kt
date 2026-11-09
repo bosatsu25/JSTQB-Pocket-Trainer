@@ -101,13 +101,21 @@ class StudyScreensResponsiveTest(private val device: TestDevice) {
     fun result() {
         val host = compose.setResponsiveContent(device) {
             ResultContent(
-                uiState = ResultUiState(totalQuestions = 5, correctCount = 2, accuracyPercentage = 40, recommendedAction = RecommendedAction.WEAKNESS),
+                uiState = ResultUiState(
+                    totalQuestions = 5,
+                    correctCount = 2,
+                    accuracyPercentage = 40,
+                    recommendedAction = RecommendedAction.WEAKNESS,
+                    summary = ScreenFixtures.summary
+                ),
                 onStartRecommended = {},
                 onNavigateHome = {}
             )
         }
         compose.assertNoHorizontalOverflow()
         compose.assertTouchTargetsAtLeast48dp(host)
+        compose.onNodeWithText("所要時間 3分05秒").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("復習が必要な学習目的").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(RecommendedAction.WEAKNESS.buttonLabel).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("ホームへ戻る").performScrollTo().assertIsDisplayed()
     }

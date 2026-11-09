@@ -6,6 +6,9 @@ import jp.co.testreason.core.model.ConfidenceLevel
 import jp.co.testreason.core.model.Question
 import jp.co.testreason.core.model.QuizSession
 import jp.co.testreason.core.model.StudyMode
+import jp.co.testreason.feature.result.ConfidenceRow
+import jp.co.testreason.feature.result.ObjectiveResult
+import jp.co.testreason.feature.result.SessionSummary
 
 /** Worst-case content for layout tests: long text, a wide table and a 5-choice multi-answer question. */
 object ScreenFixtures {
@@ -32,4 +35,18 @@ object ScreenFixtures {
     val session = QuizSession("s1", StudyMode.DAILY, List(5) { "q$it" }, 2, 0L, null, false)
 
     val wrongAttempt = Attempt("a1", "s1", scenarioQuestion.id, listOf("A", "C"), false, ConfidenceLevel.LOW, null, 1_000L, 0L)
+
+    val summary = SessionSummary(
+        totalTimeMs = 185_000L,
+        confidenceRows = listOf(
+            ConfidenceRow(null, 1, 0),
+            ConfidenceRow(ConfidenceLevel.GUESS, 1, 1),
+            ConfidenceRow(ConfidenceLevel.HIGH, 0, 2)
+        ),
+        strongObjectives = listOf(ObjectiveResult("FL-1.1.1", "テストの典型的な目的")),
+        reviewObjectives = listOf(
+            ObjectiveResult("FL-5.1.2", "イテレーション計画・リリース計画へのテスト担当者の貢献"),
+            ObjectiveResult("FL-4.2.4", "状態遷移テストの適用")
+        )
+    )
 }
