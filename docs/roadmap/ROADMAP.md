@@ -45,10 +45,13 @@ Tracking epic: GitHub issue #1 (dependency-ordered checklist of #2–#25).
   - **Status**: COMPLETED (229 questions)
 - **Wave 5.1: Spaced Review Engine**
   - **Goal**: Calculate review queues based on mistake tags and confidence levels.
-  - **Status**: IN_PROGRESS — open bugs #14 (mistake tag ignored, no interval growth), #15 (empty sessions, frozen clock)
+  - **Status**: COMPLETED (#14 scheduling/weakness/mastery, #15 empty sessions, live clock, daily composition)
+- **Wave 5.1b: Navigation & Home (#16)**
+  - **Goal**: Review and analytics reachable from Home, resume card, result CTA starts the next session.
+  - **Status**: COMPLETED
 - **Wave 5.2: Mastery & LO Analytics Dashboard**
   - **Goal**: Visualize LO mastery levels and weakness areas.
-  - **Status**: TODO (#18; navigation #16)
+  - **Status**: TODO (#18; chapter-level progress screen already in place)
 - **Wave 6.1: Study Modes (Chapter & Weakness Review)**
   - **Goal**: Implement Chapter Study and Targeted Weakness Review sessions.
   - **Status**: TODO (#17)

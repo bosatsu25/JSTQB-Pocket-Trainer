@@ -5,16 +5,15 @@
 ## 1. Home Screen (`HomeScreen`)
 
 ### Layout Components:
-1. **Top Bar**: App Title ("TestReason"), Current Overall Mastery Badge.
-2. **Hero Card**: "Today's Recommended Plan"
-   - Primary Action Button: "Start Daily Quiz (5 Qs)"
-   - Sub-caption: Estimated time ~3 mins.
-3. **Quick Action Grid**:
-   - Chapter Study
-   - Weakness Review
-   - Mock Exam (40 Qs)
-4. **Recent Activity Summary**:
-   - Last session score & LO progress trend.
+1. **Top Bar**: App Title ("TestReason").
+2. **Mastery Card**: overall mastery (average of LO masteries).
+3. **Resume Card** (only while an unfinished session has questions left): progress and "続きから再開".
+4. **Hero Card**: "今日のおすすめ学習" — due → weak → unseen questions (5 Qs, ~3 mins).
+5. **Learning Menu**:
+   - 今日の復習 (due count) → Review screen
+   - 弱点克服 (weak count) → starts a weakness session, or a message when there is none
+   - 学習分析 → chapter-level progress (full LO dashboard: #18)
+   - Chapter Study (#17) and Mock Exam (#19) are added when implemented; no placeholder buttons.
 
 ---
 
@@ -59,4 +58,5 @@
 2. **Mastery Delta Breakdown**:
    - LOs improved vs LOs needing review.
 3. **Recommended Next Action CTA**:
-   - Prominent button linking directly to the next best learning session.
+   - Prominent button that starts the next session directly: weakness session when accuracy < 80% (daily mix if
+     there is no weak question), otherwise the daily mix.

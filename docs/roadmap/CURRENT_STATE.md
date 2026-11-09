@@ -41,12 +41,20 @@
 | **Multi-answer Grading** | `QuestionGradingTest` | **PASS** | Exact-set grading; attempt selection round-trips through the entity |
 | **Scenario Rendering Parser** | `ScenarioParserTest` | **PASS** | Paragraphs, Markdown tables (incl. aligned separators) and code blocks |
 | **Question Bank Validation** | `QuestionContentValidationTest` | **PASS** | Schema rules, LO ids/chapters, K3 scenarios, banned terminology, per-LO minimum (K1/K2 ≥ 3, K3 ≥ 6) |
+| **Review Scheduling (#14)** | `SpacedReviewEngineTest` (5), `ReviewIntelligenceTest.mistakeReason_decidesTheNextReviewInterval` | **PASS** | Mistake tag re-schedules (CARELESS 3d, CONCEPT 1d); HIGH streak 7→18→45→60; miss/guess resets |
+| **Weakness & Mastery (#14)** | `ReviewIntelligenceTest.weakQuestion_isClearedByALaterConfidentCorrectAnswer`, `MasteryRepositoryTest` (2) | **PASS** | Latest-attempt weakness; confidence-weighted mastery via `TimeProvider` |
+| **Empty Sessions / Live Clock / Daily Mix (#15)** | `ReviewIntelligenceTest` (3 more tests) | **PASS** | No empty sessions; due queue follows the clock on the same Flow; daily = due → weak → unseen |
+| **Navigation & Home (#16)** | `HomeUiStateTest`, `ChapterProgressTest`, `assembleDebug` | **PASS** | Review/Analytics routes, resume card, result CTA; no empty `onClick` left. UI not exercised on a device |
 | **Copyright Check (ADR-0006)** | Reviewer pass + 18-char overlap script against the syllabus text (not committed: the syllabus text is copyrighted) | **PASS** | Seven independent reviewers (not the authors) re-checked every key against the syllabus (K3 answers recomputed) and rewrote copied text; 18-char overlap hits went from 178 to 0 across all 8 files. Key changes: none. Wording fixes for ambiguity: c1-016, c2-025, c3-001; explanation fixes: c4-011, c4-016, c5-028 |
 
 ---
 
 ## Execution Log
 
+- `claude/vibrant-maxwell-2sx0ab` (Wave 5.1 / 5.1b, issues #14–#16):
+  - Spaced review: mistake tag re-schedules, intervals grow from the previous one, latest-attempt weakness, confidence-weighted mastery (spec in `LEARNING_LOOP.md`).
+  - Sessions: empty queues create no session; due queue re-evaluated on a 1-minute clock; daily mix due → weak → unseen → random.
+  - Home: resume card, review / weakness / analytics menu, snackbar for empty queues; Review and Analytics routes; result CTA starts the next session; minimal chapter progress screen.
 - `claude/vibrant-maxwell-2sx0ab` (Waves 4.4 / 4.5, issues #2–#13):
   - Added CI (`.github/workflows/ci.yml`), Unix `gradlew`, `scripts/verify.sh`.
   - ADR-0006 content/trademark policy and `docs/content/AUTHORING_GUIDE.md`.
