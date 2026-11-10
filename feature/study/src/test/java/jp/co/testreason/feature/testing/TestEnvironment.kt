@@ -14,6 +14,9 @@ import jp.co.testreason.core.data.QuizRepositoryImpl
 import jp.co.testreason.core.database.AttemptEntity
 import jp.co.testreason.core.database.SessionEntity
 import jp.co.testreason.core.database.TestReasonDatabase
+import jp.co.testreason.core.datastore.DarkThemeConfig
+import jp.co.testreason.core.datastore.UserPreferences
+import jp.co.testreason.core.datastore.UserPreferencesRepository
 import jp.co.testreason.core.domain.SpacedReviewEngine
 import jp.co.testreason.core.model.Choice
 import jp.co.testreason.core.model.ConfidenceLevel
@@ -23,6 +26,9 @@ import jp.co.testreason.core.model.Syllabus
 import jp.co.testreason.core.model.TimeProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -72,6 +78,8 @@ class TestEnvironment(questions: List<Question> = SampleData.questions) {
         db, quizRepository, masteryRepository, SpacedReviewEngine(clock), clock
     )
 
+    val preferences = FakeUserPreferencesRepository()
+
     suspend fun start() = quizRepository.syncBundledQuestions()
 
     /** Inserts a session with a fixed question order (repository sessions shuffle). */
@@ -89,6 +97,18 @@ class TestEnvironment(questions: List<Question> = SampleData.questions) {
     }
 
     fun close() = db.close()
+}
+
+/** In-memory settings; the real DataStore is tested in core (DataStorePreferencesTest). */
+class FakeUserPreferencesRepository(initial: UserPreferences = UserPreferences()) : UserPreferencesRepository {
+    private val state = MutableStateFlow(initial)
+    override val userPreferences: Flow<UserPreferences> = state
+
+    override suspend fun setDailyGoal(questions: Int) {
+        if (questions in UserPreferences.DAILY_GOAL_OPTIONS) state.update { it.copy(dailyGoalQuestions = questions) }
+    }
+
+    override suspend fun setDarkThemeConfig(config: DarkThemeConfig) = state.update { it.copy(darkThemeConfig = config) }
 }
 
 object SampleData {

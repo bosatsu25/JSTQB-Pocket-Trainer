@@ -8,7 +8,8 @@
 1. **Top Bar**: App Title ("TestReason").
 2. **Mastery Card**: overall mastery (average of LO masteries).
 3. **Resume Card** (only while an unfinished session has questions left): progress and "続きから再開".
-4. **Hero Card**: "今日のおすすめ学習" — due → weak → unseen questions (5 Qs, ~3 mins).
+4. **Hero Card**: "今日のおすすめ学習" — due → weak → unseen questions. The size is the daily goal from the
+   settings (5 / 10 / 20 questions, shown with the estimated minutes; default 5 ≈ 3 minutes).
 5. **Learning Menu**:
    - 今日の復習 (due count) → Review screen
    - 弱点克服 (weak count) → starts a weakness session, or a message when there is none
@@ -17,6 +18,7 @@
    - 用語カード → Glossary (§9)
    - 学習分析 → learning analytics
    - 模擬試験 → Mock Exam intro
+   - 設定 → Settings (§10)
    - The menu wraps (FlowRow) on narrow screens or large fonts.
 
 ---
@@ -166,3 +168,15 @@ app (ADR-0006: not the syllabus or glossary wording).
 4. **Lap summary**: first-try count; "「まだ」のN語だけもう1周", "同じ語でもう1周", "用語一覧へ戻る", "ホームへ戻る".
 
 Nothing is recorded (same rule as the rapid drill). The lap is kept in `SavedStateHandle`.
+
+---
+
+## 10. Settings (`SettingsScreen`) (#21)
+Stored in DataStore (`UserPreferencesRepository`); a change applies at once and survives a restart.
+
+- **テーマ**: システムに合わせる (default) / ライト / ダーク. The app draws nothing until the stored theme has been
+  read, so it never starts in the wrong theme and then switches.
+- **1日の目標問題数**: 5 (default) / 10 / 20 — the size of the daily session on Home.
+- A stored value this version does not know falls back to the default.
+- **Not implemented**: the study reminder notification. It needs a new dependency (WorkManager) and the
+  notification permission; waiting for the owner's decision in #21.

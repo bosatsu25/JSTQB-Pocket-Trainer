@@ -1,6 +1,7 @@
 package jp.co.testreason.e2e
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -142,6 +143,22 @@ class AppJourneyTest {
     }
 
     @Test
+    fun settings_changeTheDailySessionSize_andTheTheme() {
+        app.waitFor("復習期限・弱点・未出題の順に5問（約3分）")
+        app.tap("設定")
+        app.waitFor("1日の目標問題数")
+        app.tap("10問")
+        compose.waitUntil(TIMEOUT_MS) { runCatching { compose.onNodeWithText("10問").assertIsSelected() }.isSuccess }
+        app.tap("ダーク") // the whole app is redrawn with the other theme; the screen must survive it
+        compose.waitUntil(TIMEOUT_MS) { runCatching { compose.onNodeWithText("ダーク").assertIsSelected() }.isSuccess }
+        back()
+
+        app.waitFor("復習期限・弱点・未出題の順に10問（約6分）")
+        app.tap("今日のおすすめを開始")
+        app.waitFor("問題 1 / 10")
+    }
+
+    @Test
     fun learningMenu_opensReviewChaptersAndAnalytics() {
         app.tap("今日の復習")
         app.waitFor("復習対象はありません")
@@ -163,5 +180,6 @@ class AppJourneyTest {
 
     private companion object {
         const val DAILY_QUESTIONS = 5
+        const val TIMEOUT_MS = 15_000L
     }
 }

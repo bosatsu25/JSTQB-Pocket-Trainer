@@ -36,6 +36,8 @@ import jp.co.testreason.feature.result.ResultScreen
 import jp.co.testreason.feature.result.ResultViewModel
 import jp.co.testreason.feature.review.ReviewScreen
 import jp.co.testreason.feature.review.ReviewViewModel
+import jp.co.testreason.feature.settings.SettingsScreen
+import jp.co.testreason.feature.settings.SettingsViewModel
 import kotlinx.serialization.Serializable
 
 sealed interface Screen {
@@ -63,6 +65,9 @@ sealed interface Screen {
 
     @Serializable
     object ChapterSelectRoute : Screen
+
+    @Serializable
+    object SettingsRoute : Screen
 
     @Serializable
     object DrillSetupRoute : Screen
@@ -110,8 +115,14 @@ fun TestReasonNavHost(
                 onOpenDrill = { navController.navigate(Screen.DrillSetupRoute) },
                 onOpenGlossary = { navController.navigate(Screen.GlossaryRoute) },
                 onOpenMockExam = { navController.navigate(Screen.MockExamIntroRoute) },
-                onOpenAnalytics = { navController.navigate(Screen.AnalyticsRoute) }
+                onOpenAnalytics = { navController.navigate(Screen.AnalyticsRoute) },
+                onOpenSettings = { navController.navigate(Screen.SettingsRoute) }
             )
+        }
+
+        composable<Screen.SettingsRoute> {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            SettingsScreen(viewModel = viewModel)
         }
 
         composable<Screen.ReviewRoute> {

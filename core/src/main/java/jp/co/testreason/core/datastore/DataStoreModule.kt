@@ -25,4 +25,7 @@ object DataStoreModule {
             produceFile = { context.preferencesDataStoreFile("user_preferences.preferences_pb") }
         )
     }
+
+    @Provides
+    fun provideUserPreferencesRepository(impl: DataStorePreferences): UserPreferencesRepository = impl
 }

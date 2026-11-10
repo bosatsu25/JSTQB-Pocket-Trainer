@@ -92,7 +92,8 @@ Recommended order (epic #1): #27 → #28 → #32 → #4 → #30 → #29 → #23 
   - **Goal**: Audit TalkBack descriptions, touch target sizes, font scaling, and dynamic color styling.
   - **Status**: IN_PROGRESS (#23 — touch targets, 200% font, landscape/tablet, non-colour cues, names/roles, table rows and the exam clock warning done at the semantics level; TalkBack, Accessibility Scanner and dynamic colour need a device)
 - **Wave 8.2: Settings (#21)**
-  - **Status**: TODO
+  - **Goal**: Theme and daily goal from DataStore; study reminder notification.
+  - **Status**: IN_PROGRESS (theme and daily goal done; the reminder needs WorkManager — owner decision)
 - **Wave 8.3: Chapter Keywords & Glossary Cards (#4)**
   - **Goal**: All 94 syllabus keywords with our own one-line summaries; glossary list and flash cards; keyword coverage report.
   - **Status**: COMPLETED

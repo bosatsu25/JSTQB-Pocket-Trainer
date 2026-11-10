@@ -2,12 +2,16 @@ package jp.co.testreason.ui
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import jp.co.testreason.core.datastore.DarkThemeConfig
+import jp.co.testreason.core.datastore.UserPreferences
 import jp.co.testreason.feature.chapter.ChapterSelectContent
 import jp.co.testreason.feature.chapter.ChapterSelectUiState
 import jp.co.testreason.feature.chapter.chapterOverview
@@ -21,6 +25,8 @@ import jp.co.testreason.feature.quiz.QuizUiState
 import jp.co.testreason.feature.result.RecommendedAction
 import jp.co.testreason.feature.result.ResultContent
 import jp.co.testreason.feature.result.ResultUiState
+import jp.co.testreason.feature.settings.SettingsContent
+import jp.co.testreason.feature.settings.SettingsUiState
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -43,15 +49,43 @@ class StudyScreensResponsiveTest(private val device: TestDevice) {
     fun home() {
         val host = compose.setResponsiveContent(device) {
             HomeContent(
-                uiState = HomeUiState(averageMastery = 0.42f, activeSession = ScreenFixtures.session, dueReviewCount = 12, weakQuestionCount = 7),
+                uiState = HomeUiState(
+                    averageMastery = 0.42f,
+                    activeSession = ScreenFixtures.session,
+                    dueReviewCount = 12,
+                    weakQuestionCount = 7,
+                    dailyGoal = 20
+                ),
                 actions = HomeActions()
             )
         }
         compose.assertNoHorizontalOverflow()
         compose.assertAccessible(host)
-        listOf("続きから再開", "今日のおすすめを開始", "今日の復習", "弱点克服", "章別学習", "周回モード", "用語カード", "模擬試験", "学習分析").forEach {
+        compose.onNodeWithText("復習期限・弱点・未出題の順に20問（約12分）").performScrollTo().assertIsDisplayed()
+        listOf("続きから再開", "今日のおすすめを開始", "今日の復習", "弱点克服", "章別学習", "周回モード", "用語カード", "模擬試験", "学習分析", "設定").forEach {
             compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()
         }
+    }
+
+    @Test
+    fun settings() {
+        val host = compose.setResponsiveContent(device) {
+            SettingsContent(
+                uiState = SettingsUiState(
+                    isLoading = false,
+                    preferences = UserPreferences(dailyGoalQuestions = 10, darkThemeConfig = DarkThemeConfig.DARK)
+                ),
+                onSelectTheme = {},
+                onSelectDailyGoal = {}
+            )
+        }
+        compose.assertNoHorizontalOverflow()
+        compose.assertAccessible(host)
+        compose.onNodeWithText("システムに合わせる").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("ダーク").performScrollTo().assertIsSelected()
+        compose.onNodeWithText("ライト").performScrollTo().assertIsNotSelected()
+        compose.onNodeWithText("10問").performScrollTo().assertIsSelected()
+        compose.onNodeWithText("20問").performScrollTo().assertIsNotSelected()
     }
 
     @Test
