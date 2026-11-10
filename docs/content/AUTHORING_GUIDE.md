@@ -91,3 +91,20 @@ Every `*.json` file in that folder is loaded.
 - [ ] K3: answer recomputed independently
 - [ ] Terminology follows 2023V4.0.J02
 - [ ] Analysis for every choice
+
+## 7. Glossary (`core/src/main/assets/glossary/terms.json`)
+
+One entry per keyword listed at the top of a syllabus chapter (keywords are examinable at K1).
+
+```json
+{ "id": "g-001", "term": "カバレッジ", "chapters": [1, 4], "summary": "…。" }
+```
+
+- `term` is the keyword exactly as the syllabus spells it. A keyword listed in two chapters is **one** entry with both chapters.
+- `summary` is **one line in our own words**, at most 60 characters, ending with 「。」. Do not copy the syllabus or
+  the ISTQB/JSTQB glossary definition; say what distinguishes the term from the ones it is confused with
+  (エラー / 欠陥 / 故障, 検証 / 妥当性確認, …).
+- Use syllabus terminology (section 1, rule 3).
+- `GlossaryContentValidationTest` checks the per-chapter keyword counts, the format, and reports keywords that no
+  question mentions.
+- A reviewer who is not the author checks every summary against the syllabus and the keyword lists per chapter.

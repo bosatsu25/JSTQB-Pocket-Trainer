@@ -89,8 +89,9 @@ Recommended order (epic #1): #27 → #28 → #32 → #4 → #30 → #29 → #23 
   - **Status**: IN_PROGRESS (#23 — touch targets, 200% font, landscape/tablet and non-colour cues done; TalkBack, Accessibility Scanner and dynamic colour remain)
 - **Wave 8.2: Settings (#21)**
   - **Status**: TODO
-- **Wave 8.3: Chapter Keywords (#4)**
-  - **Status**: TODO (LO master itself done)
+- **Wave 8.3: Chapter Keywords & Glossary Cards (#4)**
+  - **Goal**: All 94 syllabus keywords with our own one-line summaries; glossary list and flash cards; keyword coverage report.
+  - **Status**: COMPLETED
 - **Wave 9.1: Performance & Macrobenchmarks**
   - **Goal**: Generate Baseline Profile and measure startup/scroll benchmarks.
   - **Status**: TODO (#24 — clock moved off the main thread; N+1 queries and measurements remain)

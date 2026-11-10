@@ -16,6 +16,10 @@ import jp.co.testreason.feature.drill.DrillScreen
 import jp.co.testreason.feature.drill.DrillSetupScreen
 import jp.co.testreason.feature.drill.DrillSetupViewModel
 import jp.co.testreason.feature.drill.DrillViewModel
+import jp.co.testreason.feature.glossary.GlossaryCardsScreen
+import jp.co.testreason.feature.glossary.GlossaryCardsViewModel
+import jp.co.testreason.feature.glossary.GlossaryScreen
+import jp.co.testreason.feature.glossary.GlossaryViewModel
 import jp.co.testreason.feature.explanation.ExplanationScreen
 import jp.co.testreason.feature.explanation.ExplanationViewModel
 import jp.co.testreason.feature.home.HomeScreen
@@ -68,6 +72,13 @@ sealed interface Screen {
     data class DrillRoute(val chapter: Int, val count: Int) : Screen
 
     @Serializable
+    object GlossaryRoute : Screen
+
+    /** [chapter] 0 = every chapter. */
+    @Serializable
+    data class GlossaryCardsRoute(val chapter: Int) : Screen
+
+    @Serializable
     object MockExamIntroRoute : Screen
 
     @Serializable
@@ -97,6 +108,7 @@ fun TestReasonNavHost(
                 onOpenReview = { navController.navigate(Screen.ReviewRoute) },
                 onOpenChapters = { navController.navigate(Screen.ChapterSelectRoute) },
                 onOpenDrill = { navController.navigate(Screen.DrillSetupRoute) },
+                onOpenGlossary = { navController.navigate(Screen.GlossaryRoute) },
                 onOpenMockExam = { navController.navigate(Screen.MockExamIntroRoute) },
                 onOpenAnalytics = { navController.navigate(Screen.AnalyticsRoute) }
             )
@@ -119,6 +131,25 @@ fun TestReasonNavHost(
             ChapterSelectScreen(
                 viewModel = viewModel,
                 onStartQuiz = { sessionId -> navController.navigate(Screen.QuizRoute(sessionId)) }
+            )
+        }
+
+        composable<Screen.GlossaryRoute> {
+            val viewModel: GlossaryViewModel = hiltViewModel()
+            GlossaryScreen(
+                viewModel = viewModel,
+                onOpenCards = { chapter ->
+                    navController.navigate(Screen.GlossaryCardsRoute(chapter ?: 0)) { launchSingleTop = true }
+                }
+            )
+        }
+
+        composable<Screen.GlossaryCardsRoute> {
+            val viewModel: GlossaryCardsViewModel = hiltViewModel()
+            GlossaryCardsScreen(
+                viewModel = viewModel,
+                onBackToList = { navController.popBackStack<Screen.GlossaryRoute>(inclusive = false) },
+                onNavigateHome = { navController.popBackStack<Screen.HomeRoute>(inclusive = false) }
             )
         }
 
