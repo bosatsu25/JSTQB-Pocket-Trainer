@@ -57,3 +57,16 @@ Rules:
 - `ResponsiveHarnessSelfTest` proves the assertions fail on a broken layout; keep it green.
 - New screens must add a `*Content` composable and a case in a `*ResponsiveTest` before they are DONE.
 - Use worst-case fixtures (long Japanese text, wide tables, 5-choice multi-answer questions) — see `ScreenFixtures`.
+
+---
+
+## 3. ViewModel Tests
+
+- ViewModels are tested against the **real** `QuizRepositoryImpl` / `MasteryRepositoryImpl` on an in-memory Room
+  database (`feature/*/src/test/.../testing/TestEnvironment.kt`), so behaviour such as session ordering or review
+  scheduling is exercised end to end below the UI.
+- `MainDispatcherRule` sets an `UnconfinedTestDispatcher` as Main; one-off events are asserted with Turbine.
+- Time is controlled with `MutableClock` (the app's `TimeProvider`).
+- Endless periodic flows must not run on the collector's dispatcher (the due-queue clock uses `flowOn(Default)`);
+  otherwise `runTest` keeps advancing virtual time forever.
+

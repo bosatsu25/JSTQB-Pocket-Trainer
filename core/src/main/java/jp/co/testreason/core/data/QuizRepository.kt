@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -286,13 +287,17 @@ class QuizRepositoryImpl @Inject constructor(
     private suspend fun activeQuestions(ids: List<String>): List<Question> =
         ids.mapNotNull { id -> questionDao.getQuestionById(id)?.takeIf { it.isActive }?.toDomain() }
 
-    /** Emits immediately and then periodically so time-based queries notice that time has passed. */
+    /**
+     * Emits immediately and then periodically so time-based queries notice that time has passed.
+     * Runs on [Dispatchers.Default] so the endless loop never occupies (or, in tests, the virtual clock of)
+     * the collector's dispatcher.
+     */
     private fun clockTicks(): Flow<Unit> = flow {
         while (true) {
             emit(Unit)
             delay(CLOCK_TICK_MS)
         }
-    }
+    }.flowOn(Dispatchers.Default)
 
     override suspend fun completeQuestion(sessionId: String, questionId: String): QuizSession? {
         return db.withTransaction {

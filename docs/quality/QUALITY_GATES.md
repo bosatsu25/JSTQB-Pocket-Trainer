@@ -11,6 +11,10 @@ Every Wave / PR must satisfy the following Quality Gates:
 
 2. **Unit & Integration Tests**:
    - `gradlew testDebugUnitTest` must pass with 0 failures.
+   - Every new or changed ViewModel needs a ViewModel test (real repository on in-memory Room via the
+     `TestEnvironment` helper in each feature module's tests, `MainDispatcherRule`, Turbine for one-off events).
+   - Every new screen needs a stateless `*Content` composable covered by the responsive suite
+     (docs/quality/TEST_STRATEGY.md §2).
 
 3. **Static Analysis & Code Style**:
    - `gradlew lintDebug` must produce no new errors or high-severity warnings.
