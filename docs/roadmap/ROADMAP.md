@@ -71,13 +71,16 @@ Tracking epic: GitHub issue #1 (dependency-ordered checklist of #2–#25).
 ---
 
 ## Milestone M4 — UX Polish, Performance & Release Readiness
-Recommended order (epic #1): #27 → #28 → #30 → #29 → #23 → #21 → #24 → #4 → #25.
+Recommended order (epic #1): #27 → #28 → #32 → #4 → #30 → #29 → #23 → #21 → #24 → #25.
 
 - **Wave 7.2: Content Human Review (#27)**
   - **Goal**: Human review of the 52 K3 questions and a K1/K2 spot-check; required before release.
   - **Status**: TODO
 - **Wave 7.3: Double-tap Guards for Session Start (#28)**
   - **Goal**: Home / result / chapter / analytics / mock-exam start buttons cannot create duplicate sessions.
+  - **Status**: COMPLETED
+- **Wave 7.5: Rapid Drill Mode (#32)**
+  - **Goal**: 周回モード — answer shown on the tap, missed questions repeat until the lap is cleared; not recorded in mastery / review.
   - **Status**: COMPLETED
 - **Wave 7.4: CI Stability (#30) & Navigation E2E Tests (#29)**
   - **Status**: TODO

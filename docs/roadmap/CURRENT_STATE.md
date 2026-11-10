@@ -6,7 +6,7 @@
 
 - **Current Milestone**: Milestone M4 - IN_PROGRESS (M2–M3 merged to main in PR #26)
 - **Current Branch**: `claude/vibrant-maxwell-2sx0ab`
-- **Tracking**: GitHub epic #1 (issues #2–#25)
+- **Tracking**: GitHub epic #1 (issues #2–#32)
 - **Room Schema**: version 3 (non-destructive migrations 1→2, 2→3)
 - **Question Bank**: 229 questions covering all 64 LOs of syllabus 2023V4.0.J02
 - **Module Architecture**: 5 Modules (`:app`, `:core`, `:feature:study`, `:feature:review`, `:feature:progress`)
@@ -53,15 +53,20 @@
 | **Exam Blueprint (#19)** | `ExamBlueprintTest`, `ExamComposerTest` | **PASS** | 40 questions, K1/K2/K3 = 8/24/8, chapters 8/6/4/11/9/2, 29 LO groups covering all 64 LOs (ISTQB v1.18); bundled bank supports 3 exams without repeats |
 | **Mock Exam Flow (#19)** | `MockExamRepositoryTest` (6), `MockExamViewModelTest` (6), `MigrationTest.migrate2To3…`, `MockExamResponsiveTest` (20) | **PASS** | Answers changeable until submit, deadline enforced, auto-submit and post-restart submit, 25 = fail / 26 = pass, only answered questions recorded |
 | **Session Start Guards (#28)** | Home / Result / ChapterSelect / Analytics / Review / MockExam ViewModel tests, `MockExamRepositoryTest.onlyOneExamCanBeOpen…`, `MockExamResponsiveTest.introWithAnOpenExam…` | **PASS** | Second tap ignored until the screen is shown again; one open mock exam at a time. Mutation check: removing the lock in Home and ChapterSelect makes their tests fail |
+| **Rapid Drill (#32)** | `DrillLapTest` (4), `DrillViewModelTest` (15), `DrillScreensResponsiveTest` (30) | **PASS** | Answer shown on the tap, misses re-queued until the lap is cleared, lap restored from saved state (shown answer, finish time, retired questions dropped); a finished lap leaves attempts / mastery / weak / due / sessions empty; a double tap on "次へ" does not answer the next question; each question starts at the top (mutation-checked). UI not exercised on a device |
 | **Copyright Check (ADR-0006)** | Reviewer pass + 18-char overlap script against the syllabus text (not committed: the syllabus text is copyrighted) | **PASS** | Seven independent reviewers (not the authors) re-checked every key against the syllabus (K3 answers recomputed) and rewrote copied text; 18-char overlap hits went from 178 to 0 across all 8 files. Key changes: none. Wording fixes for ambiguity: c1-016, c2-025, c3-001; explanation fixes: c4-011, c4-016, c5-028 |
 
 ---
 
 ## Execution Log
 
+- `claude/vibrant-maxwell-2sx0ab` (Wave 7.5, issue #32):
+  - Rapid drill (周回モード): setup by scope, answer revealed on the tap, missed questions re-queued until the lap is cleared, lap summary with pace.
+  - Drill answers are deliberately not recorded (no attempt / mastery / review / session); reason in `LEARNING_LOOP.md`.
 - `claude/vibrant-maxwell-2sx0ab` (Wave 7.3, issue #28):
   - Start buttons lock from the tap until the screen is shown again; the review screen had no guard at all.
   - Only one mock exam can be open; the intro offers resume instead of start while one is unsubmitted.
+  - Review finding fixed: Home stays locked while a session is still being created, even if Home is shown again.
 - PR #26 merged to main (merge commit 2161144): issues #2, #3, #5–#20, #22 closed.
 - `claude/vibrant-maxwell-2sx0ab` (Waves 7.0 / 7.1, issues #22, #19):
   - Exam format researched from JSTQB exam guide, ISTQB Exam Structure and Rules Tables v1.18 and Pearson VUE (`docs/product/EXAM_FORMAT.md`); the published FL syllabus is still 2023V4.0.J02.
