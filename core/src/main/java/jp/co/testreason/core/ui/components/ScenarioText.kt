@@ -30,7 +30,7 @@ sealed interface ScenarioBlock {
     data class Code(val text: String) : ScenarioBlock
 }
 
-private val TABLE_SEPARATOR = Regex("""^\|?(\s*:?-{2,}:?\s*\|)+\s*:?-*:?\s*\|?$""")
+internal val TABLE_SEPARATOR = Regex("""^\|?(\s*:?-{2,}:?\s*\|)+\s*:?-*:?\s*\|?$""")
 
 /** Splits scenario text into paragraphs, Markdown-style tables and ``` code blocks. */
 fun parseScenario(text: String): List<ScenarioBlock> {
