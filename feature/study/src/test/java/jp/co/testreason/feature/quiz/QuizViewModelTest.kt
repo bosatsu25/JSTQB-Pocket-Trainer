@@ -98,4 +98,24 @@ class QuizViewModelTest {
         }
         assertFalse(env.db.attemptDao().getAttempt("s1", SampleData.single1.id)!!.isCorrect)
     }
+
+    @Test
+    fun tapAfterTheFirstSubmitCompleted_isIgnored() = runTest {
+        // Deterministic form of the CI race: the second tap arrives after the first submission finished.
+        val vm = viewModelFor(SampleData.single1.id)
+        vm.selectChoice("A")
+
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
+            vm.submitAnswer()
+            awaitItem()
+            vm.uiState.first { !it.isSubmitting }
+            assertFalse(vm.uiState.value.canSubmit)
+
+            vm.selectChoice("B")
+            vm.submitAnswer()
+            expectNoEvents()
+        }
+        assertFalse(env.db.attemptDao().getAttempt("s1", SampleData.single1.id)!!.isCorrect)
+    }
 }
+

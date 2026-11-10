@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,7 +24,9 @@ data class ExplanationUiState(
     val question: Question? = null,
     val attempt: Attempt? = null,
     val isLastQuestion: Boolean = false,
-    val isProcessing: Boolean = false
+    val isProcessing: Boolean = false,
+    /** The question is completed and navigation was requested; further taps are ignored. */
+    val isCompleted: Boolean = false
 )
 
 sealed interface ExplanationUiEvent {
@@ -60,12 +63,10 @@ class ExplanationViewModel @Inject constructor(
                 quizRepository.getAttemptsForSession(sessionId).collect { attempts ->
                     val attempt = attempts.find { it.questionId == questionId }
                     val isLast = session.currentQuestionIndex + 1 >= session.questionIds.size
-                    _uiState.value = ExplanationUiState(
-                        session = session,
-                        question = question,
-                        attempt = attempt,
-                        isLastQuestion = isLast
-                    )
+                    // Keep isProcessing / isCompleted: a data refresh must not re-enable the button.
+                    _uiState.update {
+                        it.copy(session = session, question = question, attempt = attempt, isLastQuestion = isLast)
+                    }
                 }
             }
         }
@@ -74,10 +75,7 @@ class ExplanationViewModel @Inject constructor(
     fun selectMistakeReason(reason: MistakeReason) {
         viewModelScope.launch {
             quizRepository.updateMistakeReason(sessionId, questionId, reason)
-            val currentAttempt = _uiState.value.attempt
-            if (currentAttempt != null) {
-                _uiState.value = _uiState.value.copy(attempt = currentAttempt.copy(mistakeReason = reason))
-            }
+            _uiState.update { state -> state.copy(attempt = state.attempt?.copy(mistakeReason = reason)) }
         }
     }
 
@@ -86,8 +84,8 @@ class ExplanationViewModel @Inject constructor(
         val session = state.session ?: return
         val question = state.question ?: return
 
-        if (state.isProcessing) return
-        _uiState.value = state.copy(isProcessing = true)
+        if (state.isProcessing || state.isCompleted) return
+        _uiState.update { it.copy(isProcessing = true) }
 
         viewModelScope.launch {
             val updatedSession = quizRepository.completeQuestion(sessionId, questionId)
@@ -98,7 +96,7 @@ class ExplanationViewModel @Inject constructor(
             } else {
                 _events.emit(ExplanationUiEvent.NavigateToNextQuestion(sessionId))
             }
-            _uiState.value = _uiState.value.copy(isProcessing = false)
+            _uiState.update { it.copy(isProcessing = false, isCompleted = true) }
         }
     }
 }

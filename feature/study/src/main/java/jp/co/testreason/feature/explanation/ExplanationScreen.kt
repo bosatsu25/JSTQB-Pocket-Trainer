@@ -90,7 +90,7 @@ fun ExplanationContent(
                     if (!attempt.isCorrect) MistakeReasonSelector(attempt.mistakeReason, onSelectMistakeReason)
                     Button(
                         onClick = onNext,
-                        enabled = !uiState.isProcessing,
+                        enabled = !uiState.isProcessing && !uiState.isCompleted,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {

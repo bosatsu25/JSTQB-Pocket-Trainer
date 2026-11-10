@@ -79,4 +79,19 @@ class ExplanationViewModelTest {
         }
         assertTrue(env.quizRepository.getSessionById("s1")!!.isFinalized)
     }
+
+    @Test
+    fun secondProceedAfterTheFirstCompleted_isIgnored() = runTest {
+        val vm = answerAndOpen(SampleData.single1.id, correct = true)
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
+            vm.proceedToNext()
+            awaitItem()
+            vm.uiState.first { !it.isProcessing }
+            vm.proceedToNext()
+            vm.uiState.first { !it.isProcessing } // let a (wrongly) started second call finish first
+            expectNoEvents()
+        }
+        assertEquals(1, env.quizRepository.getSessionById("s1")!!.currentQuestionIndex)
+    }
 }
+
