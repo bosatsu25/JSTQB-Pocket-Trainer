@@ -28,7 +28,8 @@ TestReason applies a risk-based testing approach:
    - Tools: Compose UI Test (`createComposeRule`).
 
 4. **E2E / CUJ Tests**:
-   - Target: Critical Learning Loop (`Home -> Quiz -> Answer -> Explanation -> Result`).
+   - Target: Critical Learning Loop (`Home -> Quiz -> Answer -> Explanation -> Result`), mock exam, drill, glossary.
+   - Tools: Compose UI Test on Robolectric against the real app (section 4). No device tests yet.
 
 ---
 
@@ -69,4 +70,36 @@ Rules:
 - Time is controlled with `MutableClock` (the app's `TimeProvider`).
 - Endless periodic flows must not run on the collector's dispatcher (the due-queue clock uses `flowOn(Default)`);
   otherwise `runTest` keeps advancing virtual time forever.
+
+---
+
+## 4. End-to-End Journey Tests (the real app on the JVM)
+
+`app/src/test/.../e2e/` starts `MainActivity` on Robolectric with the **real** Hilt graph, the real Room
+database and the bundled questions and glossary. Nothing is faked, so these tests cover what the per-screen
+tests cannot: that the dependency graph starts, that every screen is wired into `TestReasonNavHost`, and that
+navigation, the back stack and state restoration behave. No test-only dependency is needed (no
+`hilt-android-testing`): the tests run the production `TestReasonApplication`.
+
+| Class | What it covers |
+|---|---|
+| `AppJourneyTest` | daily session Home → Quiz → Explanation → Result → Home; back from the explanation and resume; mock exam left, resumed and submitted; rapid drill; glossary and cards; review / analytics / chapter select |
+| `ProcessRecreationTest` | the activity is destroyed and rebuilt from its saved instance state only (new ViewModels): quiz selection and confidence, mock exam answers and clock, drill lap and shown answer |
+
+Rules:
+- `AppRobot` drives the app by the texts on screen and waits for asynchronous loads; on a timeout it reports what
+  was on screen. Never replace a wait with a fixed sleep (the only sleep is the 400 ms tap guard of the drill and
+  the cards, which runs on the real clock here).
+- The content is real and the composition random (which questions, single or two answers). A journey that fails
+  only sometimes has found a defect that depends on the content: reproduce it by re-running, do not retry it away.
+  (That is how the mock exam's lost-selection race was found.)
+- Time cannot be moved in these tests (`SystemTimeProvider`). Deadlines and review intervals stay with the
+  ViewModel and repository tests, which control the clock.
+- Simulated process death keeps the process, so singletons (database, repositories) are the same objects.
+- Every class that launches a real activity uses `DrainMainLooperRule` as its outermost rule. All tests of a
+  module share one JVM, and a main-looper task left behind by one test stops later Compose tests from ever
+  becoming idle.
+- A new screen or route adds a step to a journey before it is DONE.
+- **Not covered**: a real device or emulator (rendering on real hardware, TalkBack, system back gesture,
+  performance). That stays manual until an instrumented test run exists.
 

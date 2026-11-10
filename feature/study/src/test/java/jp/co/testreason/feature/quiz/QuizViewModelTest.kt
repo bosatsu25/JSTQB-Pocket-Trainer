@@ -2,6 +2,7 @@ package jp.co.testreason.feature.quiz
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import jp.co.testreason.core.model.ConfidenceLevel
 import jp.co.testreason.feature.testing.MainDispatcherRule
 import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
@@ -61,6 +62,31 @@ class QuizViewModelTest {
         val attempt = env.db.attemptDao().getAttempt("s1", SampleData.single1.id)!!
         assertTrue(attempt.isCorrect)
         assertEquals(42_000L, attempt.timeSpentMs)
+    }
+
+    @Test
+    fun selectionAndConfidence_surviveProcessDeath_butOnlyForTheSameQuestion() = runTest {
+        val sessionId = env.session("s1", SampleData.multi.id, SampleData.single1.id)
+        val handle = SavedStateHandle(mapOf("sessionId" to sessionId))
+        val before = QuizViewModel(env.quizRepository, env.clock, handle)
+        before.uiState.first { it.currentQuestion != null }
+        before.selectChoice("B")
+        before.selectChoice("D")
+        before.selectConfidence(ConfidenceLevel.LOW)
+
+        val after = QuizViewModel(env.quizRepository, env.clock, handle)
+        val restored = after.uiState.first { it.currentQuestion != null }
+        assertEquals(setOf("B", "D"), restored.selectedChoiceIds)
+        assertEquals(ConfidenceLevel.LOW, restored.confidence)
+        assertTrue(restored.canSubmit)
+
+        // The session moved on to the next question while the input was saved: nothing is carried over.
+        env.answer(sessionId, SampleData.multi.id, correct = true)
+        env.quizRepository.completeQuestion(sessionId, SampleData.multi.id)
+        val next = QuizViewModel(env.quizRepository, env.clock, handle).uiState.first { it.currentQuestion != null }
+        assertEquals(SampleData.single1.id, next.currentQuestion!!.id)
+        assertTrue(next.selectedChoiceIds.isEmpty())
+        assertEquals(null, next.confidence)
     }
 
     @Test

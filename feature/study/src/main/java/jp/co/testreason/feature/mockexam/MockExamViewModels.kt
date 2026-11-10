@@ -162,17 +162,13 @@ class MockExamViewModel @Inject constructor(
         if (remaining == 0L) submit()
     }
 
+    /**
+     * The new selection is worked out by the repository from the saved answer, not from this screen's state:
+     * the state lags behind a tap by a database round trip, so a second quick tap would drop the first choice.
+     */
     fun select(choiceId: String) {
         val item = _uiState.value.current ?: return
-        val required = item.question.selectCount
-        val current = item.selectedChoiceIds
-        val updated = when {
-            required == 1 -> setOf(choiceId)
-            choiceId in current -> current - choiceId
-            current.size < required -> current + choiceId
-            else -> current
-        }
-        viewModelScope.launch { mockExamRepository.answer(sessionId, item.question.id, updated) }
+        viewModelScope.launch { mockExamRepository.selectChoice(sessionId, item.question.id, choiceId) }
     }
 
     fun toggleFlag() {

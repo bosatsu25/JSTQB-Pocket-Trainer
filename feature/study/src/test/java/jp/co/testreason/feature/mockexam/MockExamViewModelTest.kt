@@ -2,6 +2,7 @@ package jp.co.testreason.feature.mockexam
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import jp.co.testreason.core.model.Choice
 import jp.co.testreason.core.model.MockExamStart
 import jp.co.testreason.feature.testing.MainDispatcherRule
 import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
@@ -42,6 +43,26 @@ class MockExamViewModelTest {
         val vm = MockExamViewModel(env.mockExamRepository, env.clock, SavedStateHandle(mapOf("sessionId" to sessionId)))
         vm.uiState.first { it.exam != null }
         return vm
+    }
+
+    @Test
+    fun twoQuickTapsOnATwoAnswerQuestion_keepBothChoices() = runTest {
+        env.close()
+        env = TestEnvironment(
+            SampleData.examBank().map { question ->
+                question.copy(selectCount = 2, choices = listOf("A", "B", "C", "D", "E").map { Choice(it, "選択肢$it", it in setOf("A", "B"), "解説$it") })
+            }
+        )
+        env.start()
+        val vm = examViewModel(startExam())
+
+        // No waiting between the taps: the second one arrives before the first is saved and shown.
+        vm.select("A")
+        vm.select("B")
+
+        val answered = vm.uiState.first { it.current!!.selectedChoiceIds.size == 2 }
+        assertEquals(setOf("A", "B"), answered.current!!.selectedChoiceIds)
+        assertEquals(39, answered.unansweredCount)
     }
 
     @Test

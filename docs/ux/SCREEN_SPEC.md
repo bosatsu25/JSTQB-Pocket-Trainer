@@ -44,6 +44,8 @@
      review comes early like LOW, and a correct answer earns 0.75 mastery credit (LOW 0.5, MEDIUM/HIGH 1.0).
 5. **Footer**:
    - Primary Action: "Submit Answer" (Enabled when choice selected).
+6. **State restoration**: the selected choices and the confidence survive process death (`SavedStateHandle`),
+   for the question they were made on.
 
 ---
 
@@ -100,6 +102,8 @@ Format and sources: `docs/product/EXAM_FORMAT.md` (ISTQB Exam Structure and Rule
    text and in their content description, and a submit button with a confirmation dialog that states the number of
    unanswered questions. Two panes from 720dp (question | navigator).
    Time up submits automatically; reopening after the deadline submits immediately.
+   Each tap on a choice is applied to the saved answer (not to what the screen shows), so two quick taps on a
+   two-answer question keep both choices.
 3. **Result**: pass-line reached / not reached, score vs pass line, unanswered count, scores by chapter and by
    K-level, a CTA to start a weakness session with the wrong answers, and every question with its verdict;
    tapping a row shows the stem, the correct vs given answer and the explanation.
