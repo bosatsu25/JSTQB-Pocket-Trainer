@@ -12,17 +12,25 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class HomeUiState(
     val averageMastery: Float = 0f,
     val activeSession: QuizSession? = null,
+    val dueReviewCount: Int = 0,
+    val weakQuestionCount: Int = 0,
     val isLoading: Boolean = false
-)
+) {
+    /** A session can be resumed only if it still has unanswered questions. */
+    val resumableSession: QuizSession?
+        get() = activeSession?.takeIf { !it.isFinalized && it.currentQuestionIndex < it.questionIds.size }
+}
 
 sealed interface HomeUiEvent {
     data class NavigateToQuiz(val sessionId: String) : HomeUiEvent
+    data class ShowMessage(val message: String) : HomeUiEvent
 }
 
 @HiltViewModel
@@ -39,29 +47,57 @@ class HomeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            quizRepository.seedInitialQuestionsIfEmpty()
+            quizRepository.syncBundledQuestions()
         }
         viewModelScope.launch {
             masteryRepository.getAllMasteries().collect { masteries ->
-                val avg = if (masteries.isNotEmpty()) {
-                    masteries.map { it.score }.average().toFloat()
-                } else 0f
-                _uiState.value = _uiState.value.copy(averageMastery = avg)
+                val avg = if (masteries.isNotEmpty()) masteries.map { it.score }.average().toFloat() else 0f
+                _uiState.update { it.copy(averageMastery = avg) }
             }
         }
         viewModelScope.launch {
             quizRepository.getActiveSession().collect { session ->
-                _uiState.value = _uiState.value.copy(activeSession = session)
+                _uiState.update { it.copy(activeSession = session) }
+            }
+        }
+        viewModelScope.launch {
+            quizRepository.observeDueReviewQuestions().collect { due ->
+                _uiState.update { it.copy(dueReviewCount = due.size) }
+            }
+        }
+        viewModelScope.launch {
+            quizRepository.observeWeakQuestions().collect { weak ->
+                _uiState.update { it.copy(weakQuestionCount = weak.size) }
             }
         }
     }
 
-    fun startDailyQuiz() {
+    fun startDailyQuiz() = startSession(emptyMessage = "出題できる問題がありません。") {
+        quizRepository.createDailySession(DAILY_QUESTION_COUNT)
+    }
+
+    fun startWeaknessReview() = startSession(emptyMessage = "弱点の問題はまだありません。まずは今日のおすすめを解きましょう。") {
+        quizRepository.createWeaknessSession()
+    }
+
+    fun resumeSession() {
+        val session = _uiState.value.resumableSession ?: return
+        viewModelScope.launch { _events.emit(HomeUiEvent.NavigateToQuiz(session.id)) }
+    }
+
+    private fun startSession(emptyMessage: String, create: suspend () -> QuizSession?) {
+        if (_uiState.value.isLoading) return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            val session = quizRepository.createDailySession(5)
-            _uiState.value = _uiState.value.copy(isLoading = false)
-            _events.emit(HomeUiEvent.NavigateToQuiz(session.id))
+            _uiState.update { it.copy(isLoading = true) }
+            val session = create()
+            _uiState.update { it.copy(isLoading = false) }
+            _events.emit(
+                if (session != null) HomeUiEvent.NavigateToQuiz(session.id) else HomeUiEvent.ShowMessage(emptyMessage)
+            )
         }
+    }
+
+    private companion object {
+        const val DAILY_QUESTION_COUNT = 5
     }
 }

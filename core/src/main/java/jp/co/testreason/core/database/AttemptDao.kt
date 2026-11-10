@@ -21,6 +21,13 @@ interface AttemptDao {
     @Query("SELECT * FROM attempts")
     fun getAllAttempts(): Flow<List<AttemptEntity>>
 
+    /** The most recent attempt of every answered question (ties on timestamp may return several rows). */
+    @Query(
+        "SELECT a.* FROM attempts a WHERE a.timestamp = " +
+            "(SELECT MAX(b.timestamp) FROM attempts b WHERE b.questionId = a.questionId)"
+    )
+    fun getLatestAttemptPerQuestion(): Flow<List<AttemptEntity>>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAttemptIgnore(attempt: AttemptEntity): Long
 

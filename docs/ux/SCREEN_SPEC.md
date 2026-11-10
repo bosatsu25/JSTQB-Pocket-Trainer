@@ -5,16 +5,24 @@
 ## 1. Home Screen (`HomeScreen`)
 
 ### Layout Components:
-1. **Top Bar**: App Title ("TestReason"), Current Overall Mastery Badge.
-2. **Hero Card**: "Today's Recommended Plan"
-   - Primary Action Button: "Start Daily Quiz (5 Qs)"
-   - Sub-caption: Estimated time ~3 mins.
-3. **Quick Action Grid**:
-   - Chapter Study
-   - Weakness Review
-   - Mock Exam (40 Qs)
-4. **Recent Activity Summary**:
-   - Last session score & LO progress trend.
+1. **Top Bar**: App Title ("TestReason").
+2. **Mastery Card**: overall mastery (average of LO masteries).
+3. **Resume Card** (only while an unfinished session has questions left): progress and "続きから再開".
+4. **Hero Card**: "今日のおすすめ学習" — due → weak → unseen questions (5 Qs, ~3 mins).
+5. **Learning Menu**:
+   - 今日の復習 (due count) → Review screen
+   - 弱点克服 (weak count) → starts a weakness session, or a message when there is none
+   - 章別学習 → Chapter Select screen
+   - 学習分析 → learning analytics
+   - 模擬試験 → Mock Exam intro
+   - The menu wraps (FlowRow) on narrow screens or large fonts.
+
+---
+
+## 1b. Chapter Select Screen (`ChapterSelectScreen`)
+- One card per syllabus chapter: title, question count, unseen count, mastery (or 未着手).
+- Count buttons: 5問 / 10問 (when the chapter has more) / 全N問. Questions are ordered unseen → weak
+  (oldest first) → others (least recently answered first).
 
 ---
 
@@ -28,8 +36,10 @@
    - Rendered stem text with support for code snippets / formatted lists.
 3. **Choice List**:
    - Single-choice radio cards (A, B, C, D).
-4. **Confidence Selector**:
-   - 4 segmented buttons (Guess / Low / Medium / High). Default: Medium.
+4. **Confidence Selector** (optional):
+   - 4 chips: 勘で選んだ (GUESS) / 自信なし (LOW) / まあまあ (MEDIUM) / 自信あり (HIGH), wrapping on narrow screens.
+   - Default: **not selected** (`null`), per LEARNING_LOOP.md. Not selected is treated as uncertain:
+     review comes early like LOW, and a correct answer earns 0.75 mastery credit (LOW 0.5, MEDIUM/HIGH 1.0).
 5. **Footer**:
    - Primary Action: "Submit Answer" (Enabled when choice selected).
 
@@ -55,8 +65,37 @@
 
 ### Layout Components:
 1. **Score Summary Card**:
-   - Accuracy percentage, total time taken, confidence distribution chart.
-2. **Mastery Delta Breakdown**:
-   - LOs improved vs LOs needing review.
+   - Accuracy percentage and correct count.
+2. **Reflection Card** (ふりかえり):
+   - Total time taken.
+   - Confidence × correctness as text rows (e.g. 「自信あり：正解 3 ／ 不正解 0」), plus a note when correct
+     answers were given with GUESS / LOW confidence.
+   - LOs answered correctly and confidently in this session vs LOs needing review (any wrong, GUESS or LOW answer).
 3. **Recommended Next Action CTA**:
-   - Prominent button linking directly to the next best learning session.
+   - Prominent button that starts the next session directly: weakness session when accuracy < 80% (daily mix if
+     there is no weak question), otherwise the daily mix.
+
+---
+
+## 5. Analytics Screen (`AnalyticsScreen`)
+1. **Accuracy by knowledge level**: K1 / K2 / K3 with correct / answered (or 未回答).
+2. **Mistake reasons**: count per tag, plus untagged misses (shown only when there are misses).
+3. **Chapter cards**: mastery bar (with text), answered LOs / total, and every LO as a ≥ 48dp row with its
+   state in text (未着手 / 弱点 / 学習中 / 習熟) and score. Tapping a row with questions starts an LO session.
+
+---
+
+## 6. Mock Exam (`MockExamIntroScreen` → `MockExamScreen` → `MockExamResultScreen`)
+Format and sources: `docs/product/EXAM_FORMAT.md` (ISTQB Exam Structure and Rules Tables v1.18, JSTQB exam guide).
+
+1. **Intro**: rules (40 questions, 60 minutes, pass at 26 = 65%, official K/chapter distribution, no explanations
+   until submission), optional 75-minute extended time, resume button for an unsubmitted exam, start button.
+2. **Exam**: remaining time in the top bar (with a text warning under 5 minutes), question and choices (radio /
+   checkbox), review flag, previous / next, a 40-cell navigator whose cells state answered (✓) and flagged (?) in
+   text and in their content description, and a submit button with a confirmation dialog that states the number of
+   unanswered questions. Two panes from 720dp (question | navigator).
+   Time up submits automatically; reopening after the deadline submits immediately.
+3. **Result**: pass-line reached / not reached, score vs pass line, unanswered count, scores by chapter and by
+   K-level, a CTA to start a weakness session with the wrong answers, and every question with its verdict;
+   tapping a row shows the stem, the correct vs given answer and the explanation.
+

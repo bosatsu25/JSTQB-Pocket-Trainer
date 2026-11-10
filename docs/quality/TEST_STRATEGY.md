@@ -29,3 +29,44 @@ TestReason applies a risk-based testing approach:
 
 4. **E2E / CUJ Tests**:
    - Target: Critical Learning Loop (`Home -> Quiz -> Answer -> Explanation -> Result`).
+
+---
+
+## 2. Responsive Layout Tests (Compose UI on Robolectric)
+
+Every screen exposes a stateless `*Content(uiState, callbacks)` composable. `app/src/test/.../ui/` renders each
+one on the JVM for five device configurations (`TestDevice`):
+
+| Device | Size (dp) | Font scale |
+|---|---|---|
+| SMALL_PHONE | 320 × 568 | 1.0 |
+| SMALL_PHONE_FONT_200 | 320 × 568 | 2.0 |
+| PHONE | 411 × 891 | 1.0 |
+| PHONE_LANDSCAPE | 891 × 411 | 1.0 |
+| TABLET_LANDSCAPE | 1280 × 800 | 1.0 |
+
+Checks per screen (`ResponsiveTestSupport.kt`):
+- **No horizontal overflow**: every semantics node lies within the screen width (unclipped geometry; content inside
+  intentionally horizontal-scrolling tables/code is exempt).
+- **Touch targets ≥ 48dp** for every clickable node (layout size, so off-screen items are checked too).
+- **Primary actions reachable** with `performScrollTo()`.
+- **Two-pane layouts** (quiz, explanation) at ≥ 720dp width; stacked below that.
+
+Rules:
+- Tests run with `@GraphicsMode(NATIVE)`: in LEGACY mode text has almost no width and overflow is invisible.
+- `ResponsiveHarnessSelfTest` proves the assertions fail on a broken layout; keep it green.
+- New screens must add a `*Content` composable and a case in a `*ResponsiveTest` before they are DONE.
+- Use worst-case fixtures (long Japanese text, wide tables, 5-choice multi-answer questions) — see `ScreenFixtures`.
+
+---
+
+## 3. ViewModel Tests
+
+- ViewModels are tested against the **real** `QuizRepositoryImpl` / `MasteryRepositoryImpl` on an in-memory Room
+  database (`feature/*/src/test/.../testing/TestEnvironment.kt`), so behaviour such as session ordering or review
+  scheduling is exercised end to end below the UI.
+- `MainDispatcherRule` sets an `UnconfinedTestDispatcher` as Main; one-off events are asserted with Turbine.
+- Time is controlled with `MutableClock` (the app's `TimeProvider`).
+- Endless periodic flows must not run on the collector's dispatcher (the due-queue clock uses `flowOn(Default)`);
+  otherwise `runTest` keeps advancing virtual time forever.
+

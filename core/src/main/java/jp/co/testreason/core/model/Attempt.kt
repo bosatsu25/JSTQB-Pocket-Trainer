@@ -4,7 +4,8 @@ data class Attempt(
     val id: String,
     val sessionId: String,
     val questionId: String,
-    val selectedChoiceId: String,
+    /** Sorted ids of the selected choices (one element for single-answer questions). */
+    val selectedChoiceIds: List<String>,
     val isCorrect: Boolean,
     val confidence: ConfidenceLevel?,
     val mistakeReason: MistakeReason?,

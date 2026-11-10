@@ -51,3 +51,44 @@ The **Critical Learning Loop** is the heart of TestReason. Every interaction wit
 4. **Careless Error** (Selected wrong radio button or rushed)
 
 *Rule*: Mistake reason tagging is strictly optional. Users can proceed directly to the next question without selecting a tag.
+
+---
+
+## Review Scheduling (`SpacedReviewEngine`)
+Each answer sets the question's next review date. The mistake tag is applied when the learner selects it
+(`QuizRepository.updateMistakeReason` re-schedules the wrong answer).
+
+| Answer | Interval |
+|---|---|
+| Incorrect, tagged CONCEPT / TERMINOLOGY or untagged | 1 day |
+| Incorrect, tagged MISREAD | 2 days |
+| Incorrect, tagged CARELESS | 3 days |
+| Correct with GUESS | 1 day (treated as not yet learned) |
+| Correct, first time or after a reset | HIGH 7 / MEDIUM 3 / LOW or UNSPECIFIED 1 day |
+| Correct again | previous × 2.5 (HIGH) / × 2 (MEDIUM) / × 1.5 (LOW, UNSPECIFIED), at least +1 day, max 60 days |
+
+A miss resets the interval regardless of history.
+
+## Weak Questions
+A question is weak while its **latest** answer was wrong or was correct with GUESS / LOW confidence.
+A later confident correct answer removes it from the weakness queue.
+
+## Mastery
+Mastery per LO is the average credit per answer: correct HIGH/MEDIUM = 1.0, correct UNSPECIFIED = 0.75,
+correct LOW = 0.5, correct GUESS = 0.25, incorrect = 0.
+
+## Session Composition
+- **Daily (5 questions)**: due reviews (oldest first) → weak questions (most recent first) → never-answered
+  questions → random questions. No duplicates.
+- **Review**: all due questions. **Weakness**: up to 5 weak questions.
+- When a queue is empty no session is created; the UI says there is nothing to study in that mode.
+
+## Learning Objective States (Analytics)
+| State | Rule |
+|---|---|
+| 未着手 (not started) | no answer yet |
+| 弱点 (weak) | mastery < 0.6 |
+| 習熟 (mastered) | mastery ≥ 0.8 **and** at least 2 answers |
+| 学習中 (learning) | everything else |
+
+Tapping an LO starts a session with up to 5 of its questions (unseen → weak → least recently answered).

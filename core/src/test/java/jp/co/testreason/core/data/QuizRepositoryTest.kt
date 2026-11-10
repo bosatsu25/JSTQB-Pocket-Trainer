@@ -49,7 +49,8 @@ class QuizRepositoryTest {
             db = db,
             masteryRepository = fakeMasteryRepository,
             spacedReviewEngine = spacedReviewEngine,
-            timeProvider = testTimeProvider
+            timeProvider = testTimeProvider,
+            bundledQuestionSource = testQuestionSource
         )
     }
 
@@ -60,7 +61,7 @@ class QuizRepositoryTest {
 
     @Test
     fun createDailySession_seedsQuestionsAndCreatesSession() = runTest {
-        val session = quizRepository.createDailySession(5)
+        val session = checkNotNull(quizRepository.createDailySession(5))
 
         assertNotNull(session)
         assertEquals(StudyMode.DAILY, session.mode)
@@ -70,14 +71,14 @@ class QuizRepositoryTest {
 
     @Test
     fun finalizeAttempt_resubmissionPreservesFirstAnswerAndChoice() = runTest {
-        val session = quizRepository.createDailySession(5)
+        val session = checkNotNull(quizRepository.createDailySession(5))
         val firstQId = session.questionIds[0]
 
         val initialAttempt = Attempt(
             id = "att1",
             sessionId = session.id,
             questionId = firstQId,
-            selectedChoiceId = "A",
+            selectedChoiceIds = listOf("A"),
             isCorrect = false,
             confidence = ConfidenceLevel.LOW,
             mistakeReason = null,
@@ -91,7 +92,7 @@ class QuizRepositoryTest {
             id = "att2",
             sessionId = session.id,
             questionId = firstQId,
-            selectedChoiceId = "B",
+            selectedChoiceIds = listOf("B"),
             isCorrect = true,
             confidence = ConfidenceLevel.HIGH,
             mistakeReason = MistakeReason.MISREAD,
@@ -103,13 +104,13 @@ class QuizRepositoryTest {
 
         val attempts = quizRepository.getAttemptsForSession(session.id).first()
         assertEquals(1, attempts.size)
-        assertEquals("A", attempts[0].selectedChoiceId) // First choice preserved!
+        assertEquals(listOf("A"), attempts[0].selectedChoiceIds) // First choice preserved!
         assertEquals(false, attempts[0].isCorrect)
     }
 
     @Test
     fun observeDueReviewQuestions_includesDueAndNow_excludesFutureAndUnseen() = runTest {
-        quizRepository.seedInitialQuestionsIfEmpty()
+        quizRepository.syncBundledQuestions()
         // Current time: 1000000L
         val dueSchedule = ReviewScheduleEntity(
             questionId = "q_fl_1_1_1",
@@ -142,7 +143,7 @@ class QuizRepositoryTest {
         assertFalse(dueQuestions.any { it.id == "q_fl_2_1_1" }) // Future excluded!
         assertFalse(dueQuestions.any { it.id == "q_fl_2_2_1" }) // Unseen excluded!
 
-        val dueSession = quizRepository.createDueReviewSession()
+        val dueSession = checkNotNull(quizRepository.createDueReviewSession())
         assertEquals(StudyMode.REVIEW, dueSession.mode)
         assertEquals(2, dueSession.questionIds.size)
         assertTrue(dueSession.questionIds.contains("q_fl_1_1_1"))
@@ -151,14 +152,14 @@ class QuizRepositoryTest {
 
     @Test
     fun completeQuestion_isIdempotentAndUpdatesMasteryOnce() = runTest {
-        val session = quizRepository.createDailySession(5)
+        val session = checkNotNull(quizRepository.createDailySession(5))
         val firstQId = session.questionIds[0]
 
         val attempt = Attempt(
             id = "att1",
             sessionId = session.id,
             questionId = firstQId,
-            selectedChoiceId = "B",
+            selectedChoiceIds = listOf("B"),
             isCorrect = true,
             confidence = ConfidenceLevel.HIGH,
             mistakeReason = null,
@@ -179,14 +180,14 @@ class QuizRepositoryTest {
 
     @Test
     fun completeQuestion_preventsAdvancingToFutureQuestions() = runTest {
-        val session = quizRepository.createDailySession(5)
+        val session = checkNotNull(quizRepository.createDailySession(5))
         val thirdQId = session.questionIds[2] // Index 2 (future question)
 
         val attempt = Attempt(
             id = "att_future",
             sessionId = session.id,
             questionId = thirdQId,
-            selectedChoiceId = "A",
+            selectedChoiceIds = listOf("A"),
             isCorrect = true,
             confidence = ConfidenceLevel.HIGH,
             mistakeReason = null,
@@ -213,7 +214,7 @@ class FakeMasteryRepository : MasteryRepository {
     private val masteries = mutableMapOf<String, Mastery>()
 
     override fun getAllMasteries() = flowOf(masteries.values.toList())
-    override suspend fun updateMastery(learningObjectiveId: String, isCorrect: Boolean) {
+    override suspend fun updateMastery(learningObjectiveId: String, isCorrect: Boolean, confidence: ConfidenceLevel?) {
         updateCount++
         masteries[learningObjectiveId] = Mastery(learningObjectiveId, if (isCorrect) 1f else 0f, 1000L, 1, if (isCorrect) 1 else 0)
     }

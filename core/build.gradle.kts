@@ -24,6 +24,13 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets {
+        // Exported Room schemas are needed by MigrationTestHelper.
+        getByName("test").assets.srcDirs(files("$projectDir/schemas"))
+    }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 ksp {
@@ -51,4 +58,9 @@ dependencies {
     testImplementation(libs.androidx.junit)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.robolectric)
+}
+
+// QuestionContentValidationTest reads the bundled JSON directly from disk; declare it so edits re-run the test.
+tasks.withType<Test>().configureEach {
+    inputs.dir("src/main/assets/questions").withPropertyName("bundledQuestions")
 }

@@ -9,22 +9,31 @@ import jp.co.testreason.core.model.Attempt
 import jp.co.testreason.core.model.ConfidenceLevel
 import jp.co.testreason.core.model.Question
 import jp.co.testreason.core.model.QuizSession
+import jp.co.testreason.core.model.TimeProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class QuizUiState(
     val session: QuizSession? = null,
     val currentQuestion: Question? = null,
-    val selectedChoiceId: String? = null,
+    val selectedChoiceIds: Set<String> = emptySet(),
     val confidence: ConfidenceLevel? = null,
-    val isSubmitting: Boolean = false
-)
+    val isSubmitting: Boolean = false,
+    /** The answer has been recorded; the screen is leaving, so further taps must not submit again. */
+    val isSubmitted: Boolean = false
+) {
+    val requiredSelectionCount: Int get() = currentQuestion?.selectCount ?: 1
+
+    val canSubmit: Boolean
+        get() = currentQuestion != null && selectedChoiceIds.size == requiredSelectionCount && !isSubmitting && !isSubmitted
+}
 
 sealed interface QuizUiEvent {
     data class NavigateToExplanation(val sessionId: String, val questionId: String, val attemptId: String) : QuizUiEvent
@@ -33,6 +42,7 @@ sealed interface QuizUiEvent {
 @HiltViewModel
 class QuizViewModel @Inject constructor(
     private val quizRepository: QuizRepository,
+    private val timeProvider: TimeProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -44,7 +54,7 @@ class QuizViewModel @Inject constructor(
     private val _events = MutableSharedFlow<QuizUiEvent>()
     val events: SharedFlow<QuizUiEvent> = _events.asSharedFlow()
 
-    private var questionStartTime: Long = System.currentTimeMillis()
+    private var questionStartTime: Long = timeProvider.currentTimeMillis()
 
     init {
         loadSession()
@@ -56,48 +66,64 @@ class QuizViewModel @Inject constructor(
             if (session != null && session.currentQuestionIndex < session.questionIds.size) {
                 val qId = session.questionIds[session.currentQuestionIndex]
                 val question = quizRepository.getQuestionById(qId)
-                questionStartTime = System.currentTimeMillis()
+                questionStartTime = timeProvider.currentTimeMillis()
                 _uiState.value = QuizUiState(
                     session = session,
                     currentQuestion = question,
-                    selectedChoiceId = null,
+                    selectedChoiceIds = emptySet(),
                     confidence = null
                 )
             }
         }
     }
 
+    /**
+     * Single-answer questions replace the selection; multi-answer questions toggle the choice
+     * and ignore taps beyond the required count.
+     */
     fun selectChoice(choiceId: String) {
-        _uiState.value = _uiState.value.copy(selectedChoiceId = choiceId)
+        _uiState.update { state ->
+            if (state.isSubmitting || state.isSubmitted) return@update state
+            val required = state.requiredSelectionCount
+            val current = state.selectedChoiceIds
+            val updated = when {
+                required == 1 -> setOf(choiceId)
+                choiceId in current -> current - choiceId
+                current.size < required -> current + choiceId
+                else -> current
+            }
+            state.copy(selectedChoiceIds = updated)
+        }
     }
 
     fun selectConfidence(confidence: ConfidenceLevel) {
-        _uiState.value = _uiState.value.copy(confidence = confidence)
+        _uiState.update { it.copy(confidence = confidence) }
     }
 
     fun submitAnswer() {
         val state = _uiState.value
         val question = state.currentQuestion ?: return
-        val selectedChoiceId = state.selectedChoiceId ?: return
-        if (state.isSubmitting) return
+        if (!state.canSubmit) return
+        val selectedChoiceIds = state.selectedChoiceIds.sorted()
 
-        _uiState.value = state.copy(isSubmitting = true)
+        _uiState.update { it.copy(isSubmitting = true) }
 
         viewModelScope.launch {
-            val isCorrect = question.choices.find { it.id == selectedChoiceId }?.isCorrect == true
-            val attemptId = "attempt_" + System.currentTimeMillis()
-            val timeSpent = System.currentTimeMillis() - questionStartTime
+            val isCorrect = question.isCorrectSelection(selectedChoiceIds)
+            val now = timeProvider.currentTimeMillis()
+            val attemptId = "attempt_$now"
+            val timeSpent = now - questionStartTime
 
             val attempt = Attempt(
                 id = attemptId,
                 sessionId = sessionId,
                 questionId = question.id,
-                selectedChoiceId = selectedChoiceId,
+                selectedChoiceIds = selectedChoiceIds,
                 isCorrect = isCorrect,
                 confidence = state.confidence,
                 mistakeReason = null,
                 timeSpentMs = timeSpent,
-                timestamp = System.currentTimeMillis()
+                timestamp = now
             )
 
             quizRepository.finalizeAttempt(attempt)
@@ -108,7 +134,8 @@ class QuizViewModel @Inject constructor(
                     attemptId = attemptId
                 )
             )
-            _uiState.value = _uiState.value.copy(isSubmitting = false)
+            // Not reset to "can submit": a tap after this point would record and navigate a second time.
+            _uiState.update { it.copy(isSubmitting = false, isSubmitted = true) }
         }
     }
 }

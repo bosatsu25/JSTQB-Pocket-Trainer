@@ -5,6 +5,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import jp.co.testreason.core.content.AssetBundledQuestionSource
+import jp.co.testreason.core.content.BundledQuestionSource
 import jp.co.testreason.core.model.SystemTimeProvider
 import jp.co.testreason.core.model.TimeProvider
 import javax.inject.Singleton
@@ -18,6 +20,17 @@ abstract class DataModule {
     abstract fun bindQuizRepository(
         impl: QuizRepositoryImpl
     ): QuizRepository
+
+    @Binds
+    abstract fun bindBundledQuestionSource(
+        impl: AssetBundledQuestionSource
+    ): BundledQuestionSource
+
+    @Binds
+    @Singleton
+    abstract fun bindMockExamRepository(
+        impl: MockExamRepositoryImpl
+    ): MockExamRepository
 
     @Binds
     @Singleton
