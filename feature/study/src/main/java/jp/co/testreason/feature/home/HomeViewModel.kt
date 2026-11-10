@@ -88,14 +88,27 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { _events.emit(HomeUiEvent.NavigateToQuiz(session.id)) }
     }
 
-    /** Unlocks the start buttons when Home is shown (again); see [startSession]. */
-    fun onScreenShown() = _uiState.update { it.copy(isLoading = false) }
+    /** A session is being created right now (as opposed to: created, and the app is navigating to it). */
+    private var isCreatingSession = false
+
+    /**
+     * Unlocks the start buttons when Home is shown (again); see [startSession]. While a session is still being
+     * created the lock stays: Home can be left and re-entered through its other menu entries in that time.
+     */
+    fun onScreenShown() {
+        if (!isCreatingSession) _uiState.update { it.copy(isLoading = false) }
+    }
 
     private fun startSession(emptyMessage: String, create: suspend () -> QuizSession?) {
         if (_uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
+        isCreatingSession = true
         viewModelScope.launch {
-            val session = create()
+            val session = try {
+                create()
+            } finally {
+                isCreatingSession = false
+            }
             if (session != null) {
                 // Stay locked while the app navigates away, so a second tap cannot create another session.
                 _events.emit(HomeUiEvent.NavigateToQuiz(session.id))

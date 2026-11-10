@@ -1,10 +1,13 @@
 package jp.co.testreason.feature.home
 
 import app.cash.turbine.test
+import jp.co.testreason.core.data.QuizRepository
+import jp.co.testreason.core.model.QuizSession
 import jp.co.testreason.feature.testing.MainDispatcherRule
 import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
 import jp.co.testreason.feature.testing.TestEnvironment
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -97,4 +100,33 @@ class HomeViewModelTest {
             assertNotEquals(first, (awaitItem() as HomeUiEvent.NavigateToQuiz).sessionId)
         }
     }
+
+    @Test
+    fun returningToHomeWhileASessionIsStillBeingCreated_keepsTheLock() = runTest {
+        // Home's other menu entries stay usable while a session is created, so Home can be shown again in between.
+        val gate = CompletableDeferred<Unit>()
+        val slow = object : QuizRepository by env.quizRepository {
+            override suspend fun createDailySession(count: Int): QuizSession? {
+                gate.await()
+                return env.quizRepository.createDailySession(count)
+            }
+        }
+        val vm = HomeViewModel(slow, env.masteryRepository)
+
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
+            vm.startDailyQuiz()
+            vm.onScreenShown()
+            assertTrue("still creating: must stay locked", vm.uiState.value.isLoading)
+            vm.startDailyQuiz()
+            vm.startWeaknessReview()
+
+            gate.complete(Unit)
+            awaitItem()
+            assertTrue("navigating: still locked", vm.uiState.value.isLoading)
+
+            vm.onScreenShown()
+            assertFalse(vm.uiState.value.isLoading)
+        }
+    }
 }
+
