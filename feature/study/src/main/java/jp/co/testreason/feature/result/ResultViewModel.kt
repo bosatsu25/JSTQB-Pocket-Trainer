@@ -59,8 +59,8 @@ class ResultViewModel @Inject constructor(
     private fun loadResult() {
         viewModelScope.launch {
             val session = quizRepository.getSessionById(sessionId)
-            val objectiveByQuestion = session?.questionIds.orEmpty()
-                .associateWith { id -> quizRepository.getQuestionById(id)?.learningObjectiveId }
+            val objectiveByQuestion = quizRepository.getQuestionsByIds(session?.questionIds.orEmpty())
+                .associate { it.id to it.learningObjectiveId }
             quizRepository.getAttemptsForSession(sessionId).collect { attempts ->
                 val total = session?.questionIds?.size ?: attempts.size
                 val correct = attempts.count { it.isCorrect }

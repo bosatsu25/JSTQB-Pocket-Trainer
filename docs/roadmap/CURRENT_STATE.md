@@ -58,12 +58,16 @@
 | **E2E Journeys (#29)** | `AppJourneyTest` (6), `ProcessRecreationTest` (3), `MockExamRepositoryTest.selectChoice…` (2), `MockExamViewModelTest.twoQuickTaps…`, `QuizViewModelTest.selectionAndConfidence_surviveProcessDeath…` | **PASS** | Real Hilt graph, Room and bundled content on Robolectric; 6 consecutive runs green. Mutation checks: the old mock exam selection code fails the quick-tap test; removing the quiz restore fails the recreation journey |
 | **Screen-reader Semantics (#23, partial)** | `assertAccessible` in all `*ResponsiveTest` classes, `ResponsiveHarnessSelfTest` (3 new), `ScenarioParserTest.tableRows…`, `MockExamResponsiveTest` (live region), `QuestionContentValidationTest` (table header rule) | **PASS** | Names and roles on every interactive element on 5 devices; table rows paired with headers; exam warning is a polite live region and the clock is not. Semantics level only: nothing was heard through TalkBack |
 | **Settings (#21, partial)** | `DataStorePreferencesTest` (4, real DataStore file), `SettingsViewModelTest` (2), `HomeViewModelTest.dailyQuiz_usesTheDailyGoalSetting`, `StudyScreensResponsiveTest.settings`, `AppJourneyTest.settings…`, `ProcessRecreationTest.settings…` | **PASS** | Settings survive a restart; a 10-question goal gives a 10-question session through the real app; changing the theme redraws the app without losing the screen. The theme colours themselves were not looked at on a device |
+| **Question Query Counts (#24, partial)** | `QuestionQueryCountTest` (3) | **PASS** | One question query per list (Room query callback); order kept; 2,000 ids survive the 999-variable limit. Mutation check: the old per-question loop makes the mock exam test report 40 instead of 1. No timing was measured |
 | **Copyright Check (ADR-0006)** | Reviewer pass + 18-char overlap script against the syllabus text (not committed: the syllabus text is copyrighted) | **PASS** | Seven independent reviewers (not the authors) re-checked every key against the syllabus (K3 answers recomputed) and rewrote copied text; 18-char overlap hits went from 178 to 0 across all 8 files. Key changes: none. Wording fixes for ambiguity: c1-016, c2-025, c3-001; explanation fixes: c4-011, c4-016, c5-028 |
 
 ---
 
 ## Execution Log
 
+- `claude/vibrant-maxwell-2sx0ab` (Wave 9.1, issue #24, the part that needs no device):
+  - Question lists are loaded with one query instead of one per question: mock exam (40 → 1 per load, and it reloads on every tap), weak and due lists, session result.
+  - Not done: Baseline Profile, start-up and frame measurements (device), and moving the sync to `Application` (to be decided after measuring).
 - `claude/vibrant-maxwell-2sx0ab` (Wave 8.2, issue #21, without the reminder):
   - Settings screen: theme (system / light / dark) and daily goal (5 / 10 / 20). The DataStore code existed but nothing used it.
   - Home's daily session uses the goal; the activity applies the theme and draws nothing until it is read.

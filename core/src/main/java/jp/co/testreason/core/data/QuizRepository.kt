@@ -6,6 +6,7 @@ import jp.co.testreason.core.content.BundledQuestionSource
 import jp.co.testreason.core.database.AttemptEntity
 import jp.co.testreason.core.database.ChoiceEntity
 import jp.co.testreason.core.database.QuestionCompletionEntity
+import jp.co.testreason.core.database.QuestionDao
 import jp.co.testreason.core.database.QuestionEntity
 import jp.co.testreason.core.database.ReviewScheduleEntity
 import jp.co.testreason.core.database.SessionEntity
@@ -38,6 +39,9 @@ import javax.inject.Singleton
 interface QuizRepository {
     fun getAllQuestions(): Flow<List<Question>>
     suspend fun getQuestionById(id: String): Question?
+
+    /** The questions with these ids in the order of [ids], retired ones included; unknown ids are skipped. */
+    suspend fun getQuestionsByIds(ids: List<String>): List<Question>
     /**
      * Upserts bundled questions whose revision changed and retires questions that are no longer bundled.
      * Safe to call repeatedly; the work runs once per process.
@@ -123,6 +127,9 @@ class QuizRepositoryImpl @Inject constructor(
     override suspend fun getQuestionById(id: String): Question? {
         return questionDao.getQuestionById(id)?.toDomain()
     }
+
+    override suspend fun getQuestionsByIds(ids: List<String>): List<Question> =
+        questionDao.getQuestionsInOrder(ids).map { it.toDomain() }
 
     override suspend fun syncBundledQuestions() {
         syncMutex.withLock {
@@ -301,7 +308,7 @@ class QuizRepositoryImpl @Inject constructor(
         }
 
     private suspend fun activeQuestions(ids: List<String>): List<Question> =
-        ids.mapNotNull { id -> questionDao.getQuestionById(id)?.takeIf { it.isActive }?.toDomain() }
+        questionDao.getQuestionsInOrder(ids).filter { it.isActive }.map { it.toDomain() }
 
     /**
      * Emits immediately and then periodically so time-based queries notice that time has passed.
@@ -438,3 +445,15 @@ fun QuizSession.toEntity() = SessionEntity(
     completedAt = completedAt,
     isFinalized = isFinalized
 )
+
+/**
+ * One query per chunk instead of one per question, returned in the order of [ids].
+ * Chunked because SQLite allows at most 999 variables per statement on older devices.
+ */
+internal suspend fun QuestionDao.getQuestionsInOrder(ids: List<String>): List<QuestionEntity> {
+    if (ids.isEmpty()) return emptyList()
+    val byId = ids.distinct().chunked(MAX_SQL_VARIABLES).flatMap { getQuestionsByIds(it) }.associateBy { it.id }
+    return ids.mapNotNull { byId[it] }
+}
+
+private const val MAX_SQL_VARIABLES = 900

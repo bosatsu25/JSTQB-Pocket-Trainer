@@ -14,6 +14,10 @@ interface QuestionDao {
     @Query("SELECT * FROM questions WHERE id = :id")
     suspend fun getQuestionById(id: String): QuestionEntity?
 
+    /** Retired questions included, in no particular order. Keep [ids] under SQLite's variable limit (999 on older devices). */
+    @Query("SELECT * FROM questions WHERE id IN (:ids)")
+    suspend fun getQuestionsByIds(ids: List<String>): List<QuestionEntity>
+
     @Query("SELECT * FROM questions WHERE learningObjectiveId = :loId AND isActive = 1")
     fun getQuestionsByLo(loId: String): Flow<List<QuestionEntity>>
 
