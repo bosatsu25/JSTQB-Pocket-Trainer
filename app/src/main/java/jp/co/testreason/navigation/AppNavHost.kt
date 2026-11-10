@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import jp.co.testreason.feature.about.AboutScreen
 import jp.co.testreason.feature.analytics.AnalyticsScreen
 import jp.co.testreason.feature.analytics.AnalyticsViewModel
 import jp.co.testreason.feature.chapter.ChapterSelectScreen
@@ -70,6 +71,9 @@ sealed interface Screen {
     object SettingsRoute : Screen
 
     @Serializable
+    object AboutRoute : Screen
+
+    @Serializable
     object DrillSetupRoute : Screen
 
     /** [chapter] 0 = every chapter, [count] 0 = all questions of the scope. */
@@ -122,8 +126,10 @@ fun TestReasonNavHost(
 
         composable<Screen.SettingsRoute> {
             val viewModel: SettingsViewModel = hiltViewModel()
-            SettingsScreen(viewModel = viewModel)
+            SettingsScreen(viewModel = viewModel, onOpenAbout = { navController.navigate(Screen.AboutRoute) { launchSingleTop = true } })
         }
+
+        composable<Screen.AboutRoute> { AboutScreen() }
 
         composable<Screen.ReviewRoute> {
             val viewModel: ReviewViewModel = hiltViewModel()

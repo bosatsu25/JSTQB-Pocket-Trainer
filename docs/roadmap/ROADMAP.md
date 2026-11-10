@@ -102,4 +102,4 @@ Recommended order (epic #1): #27 → #28 → #32 → #4 → #30 → #29 → #23 
   - **Status**: IN_PROGRESS (#24 — clock moved off the main thread and N+1 question queries removed; Baseline Profile and all measurements need a device)
 - **Wave 10.1: Release Hardening & APK Verification**
   - **Goal**: Perform legal, content verification, privacy audits, and prepare release build.
-  - **Status**: TODO (#25; depends on #27)
+  - **Status**: IN_PROGRESS (#25 — about screen with the ADR-0006 disclaimer done; R8, signing, backup rules, licence texts and the device run remain; depends on #27)

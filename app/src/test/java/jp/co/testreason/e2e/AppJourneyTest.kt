@@ -159,6 +159,16 @@ class AppJourneyTest {
     }
 
     @Test
+    fun about_isReachedFromSettings_andShowsTheVersionAndTheDisclaimer() {
+        app.tap("設定")
+        app.tap("このアプリについて")
+        app.waitFor("バージョン 1.0.0") // read from the installed package, not hard-coded
+        app.waitFor("非公式の学習アプリです")
+        back()
+        app.waitFor("1日の目標問題数")
+    }
+
+    @Test
     fun learningMenu_opensReviewChaptersAndAnalytics() {
         app.tap("今日の復習")
         app.waitFor("復習対象はありません")

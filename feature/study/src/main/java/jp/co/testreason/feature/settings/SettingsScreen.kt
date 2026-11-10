@@ -15,6 +15,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -29,9 +30,15 @@ import jp.co.testreason.core.datastore.UserPreferences
 import jp.co.testreason.core.ui.components.ResponsiveScreenColumn
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) {
+fun SettingsScreen(viewModel: SettingsViewModel, onOpenAbout: () -> Unit, modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsState()
-    SettingsContent(uiState = uiState, onSelectTheme = viewModel::setTheme, onSelectDailyGoal = viewModel::setDailyGoal, modifier = modifier)
+    SettingsContent(
+        uiState = uiState,
+        onSelectTheme = viewModel::setTheme,
+        onSelectDailyGoal = viewModel::setDailyGoal,
+        onOpenAbout = onOpenAbout,
+        modifier = modifier
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,6 +47,7 @@ fun SettingsContent(
     uiState: SettingsUiState,
     onSelectTheme: (DarkThemeConfig) -> Unit,
     onSelectDailyGoal: (Int) -> Unit,
+    onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text("設定") }) }, modifier = modifier) { padding ->
@@ -57,6 +65,9 @@ fun SettingsContent(
                 UserPreferences.DAILY_GOAL_OPTIONS.forEach { goal ->
                     SettingChip("${goal}問", selected = uiState.preferences.dailyGoalQuestions == goal) { onSelectDailyGoal(goal) }
                 }
+            }
+            OutlinedButton(onClick = onOpenAbout, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                Text("このアプリについて")
             }
         }
     }
