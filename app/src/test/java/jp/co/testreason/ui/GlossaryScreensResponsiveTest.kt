@@ -48,7 +48,7 @@ class GlossaryScreensResponsiveTest(private val device: TestDevice) {
             GlossaryContent(uiState = GlossaryUiState(isLoading = false, terms = terms, chapter = 1), onSelectChapter = {}, onOpenCards = {})
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("全章（30）").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("第6章（0）").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("カードで確認する（30語）").performScrollTo().assertIsDisplayed()
@@ -71,7 +71,7 @@ class GlossaryScreensResponsiveTest(private val device: TestDevice) {
             GlossaryCardsContent(uiState = GlossaryCardsUiState(isLoading = false, lap = lap, term = longTerm), actions = GlossaryCardsActions())
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("用語カード 0 / 3").assertIsDisplayed()
         compose.onNodeWithText("第1章・第4章・第5章").assertIsDisplayed()
         compose.onNodeWithText(longTerm.term).assertIsDisplayed()
@@ -84,7 +84,7 @@ class GlossaryScreensResponsiveTest(private val device: TestDevice) {
         var state by mutableStateOf(GlossaryCardsUiState(isLoading = false, lap = lap, term = longTerm, isRevealed = true))
         val host = compose.setResponsiveContent(device) { GlossaryCardsContent(uiState = state, actions = GlossaryCardsActions()) }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText(longTerm.summary).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("まだ").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("覚えた").performScrollTo().assertIsDisplayed()
@@ -101,7 +101,7 @@ class GlossaryScreensResponsiveTest(private val device: TestDevice) {
             GlossaryCardsContent(uiState = GlossaryCardsUiState(isLoading = false, lap = finished), actions = GlossaryCardsActions())
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("3語中、1回目で覚えていた語 2語").performScrollTo().assertIsDisplayed()
         listOf("「まだ」の1語だけもう1周", "同じ語でもう1周", "用語一覧へ戻る", "ホームへ戻る").forEach {
             compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()

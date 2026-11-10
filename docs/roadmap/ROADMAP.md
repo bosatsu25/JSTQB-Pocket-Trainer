@@ -90,7 +90,7 @@ Recommended order (epic #1): #27 → #28 → #32 → #4 → #30 → #29 → #23 
   - **Status**: COMPLETED (found and fixed: mock exam lost a choice on two quick taps; quiz input was not restored after process death)
 - **Wave 8.1: Accessibility & Adaptive Polish**
   - **Goal**: Audit TalkBack descriptions, touch target sizes, font scaling, and dynamic color styling.
-  - **Status**: IN_PROGRESS (#23 — touch targets, 200% font, landscape/tablet and non-colour cues done; TalkBack, Accessibility Scanner and dynamic colour remain)
+  - **Status**: IN_PROGRESS (#23 — touch targets, 200% font, landscape/tablet, non-colour cues, names/roles, table rows and the exam clock warning done at the semantics level; TalkBack, Accessibility Scanner and dynamic colour need a device)
 - **Wave 8.2: Settings (#21)**
   - **Status**: TODO
 - **Wave 8.3: Chapter Keywords & Glossary Cards (#4)**

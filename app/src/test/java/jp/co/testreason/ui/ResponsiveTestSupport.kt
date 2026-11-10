@@ -108,6 +108,40 @@ fun ComposeContentTestRule.assertTouchTargetsAtLeast48dp(host: ResponsiveHost) {
     if (offenders.isNotEmpty()) fail("Touch targets below 48dp:\n" + offenders.joinToString("\n"))
 }
 
+/**
+ * Fails when a screen reader could not tell what an interactive element is:
+ * - every clickable element needs a name (its own or merged text, or a content description);
+ * - every selectable or toggleable element needs a role, so it is announced as a radio button, checkbox, etc.
+ *
+ * Checked on the merged semantics tree, which is what accessibility services see.
+ */
+fun ComposeContentTestRule.assertInteractiveElementsAreLabelled() {
+    val screen = onNodeWithTag(SCREEN_TAG).fetchSemanticsNode()
+    val offenders = mutableListOf<String>()
+    fun visit(node: SemanticsNode) {
+        val config = node.config
+        if (config.getOrNull(SemanticsActions.OnClick) != null) {
+            val name = config.getOrNull(SemanticsProperties.Text).orEmpty().joinToString("") { it.text } +
+                config.getOrNull(SemanticsProperties.ContentDescription).orEmpty().joinToString("")
+            if (name.isBlank()) offenders += "node#${node.id} at ${node.positionInRoot} is clickable but has no name"
+            val hasState = config.getOrNull(SemanticsProperties.Selected) != null ||
+                config.getOrNull(SemanticsProperties.ToggleableState) != null
+            if (hasState && config.getOrNull(SemanticsProperties.Role) == null) {
+                offenders += "${node.describe()} has a selected/checked state but no role"
+            }
+        }
+        node.children.forEach(::visit)
+    }
+    visit(screen)
+    if (offenders.isNotEmpty()) fail("Not announced properly by a screen reader:\n" + offenders.joinToString("\n"))
+}
+
+/** Touch target size plus screen-reader names and roles: every screen test calls this. */
+fun ComposeContentTestRule.assertAccessible(host: ResponsiveHost) {
+    assertTouchTargetsAtLeast48dp(host)
+    assertInteractiveElementsAreLabelled()
+}
+
 private fun SemanticsNode.describe(): String {
     val text = config.getOrNull(SemanticsProperties.Text)?.joinToString { it.text }
         ?: config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()

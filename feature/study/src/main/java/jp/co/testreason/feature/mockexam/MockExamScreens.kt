@@ -46,7 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import jp.co.testreason.core.model.ExamBlueprint
@@ -201,10 +203,15 @@ fun MockExamContent(uiState: MockExamUiState, actions: MockExamActions, modifier
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "残り ${formatRemaining(uiState.remainingMs)}" + if (uiState.isTimeLow) "（残りわずか）" else "",
-                        color = if (uiState.isTimeLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                    )
+                    val color = if (uiState.isTimeLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    Row {
+                        // Changes every second: must not be a live region, or a screen reader would never stop talking.
+                        Text("残り ${formatRemaining(uiState.remainingMs)}", color = color)
+                        // Appears once and then stays the same, so it is announced once.
+                        if (uiState.isTimeLow) {
+                            Text("（残りわずか）", color = color, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                        }
+                    }
                 }
             )
         },

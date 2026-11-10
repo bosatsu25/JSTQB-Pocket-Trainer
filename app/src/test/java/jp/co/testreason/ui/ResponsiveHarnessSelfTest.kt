@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -48,6 +50,33 @@ class ResponsiveHarnessSelfTest {
             }
         }
         assertThrows(AssertionError::class.java) { compose.assertNoHorizontalOverflow() }
+    }
+
+    @Test
+    fun clickableWithoutAName_isReported() {
+        compose.setResponsiveContent(TestDevice.PHONE) {
+            Box(modifier = Modifier.size(48.dp).clickable { })
+        }
+        assertThrows(AssertionError::class.java) { compose.assertInteractiveElementsAreLabelled() }
+    }
+
+    @Test
+    fun selectableWithoutARole_isReported() {
+        compose.setResponsiveContent(TestDevice.PHONE) {
+            Box(modifier = Modifier.size(48.dp).selectable(selected = true, onClick = { })) { Text("選択肢A") }
+        }
+        assertThrows(AssertionError::class.java) { compose.assertInteractiveElementsAreLabelled() }
+    }
+
+    @Test
+    fun namedButtonAndRadioChoice_pass() {
+        compose.setResponsiveContent(TestDevice.PHONE) {
+            Column {
+                Box(modifier = Modifier.size(48.dp).clickable { }) { Text("次へ") }
+                Box(modifier = Modifier.size(48.dp).selectable(selected = true, role = Role.RadioButton, onClick = { })) { Text("選択肢A") }
+            }
+        }
+        compose.assertInteractiveElementsAreLabelled()
     }
 
     @Test

@@ -3,6 +3,8 @@ package jp.co.testreason.core.content
 import jp.co.testreason.core.model.KLevel
 import jp.co.testreason.core.model.Question
 import jp.co.testreason.core.model.Syllabus
+import jp.co.testreason.core.ui.components.TABLE_SEPARATOR
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -80,9 +82,45 @@ class QuestionContentValidationTest {
             .forEach { errors += "$where: choice ${it.id} needs text and analysis" }
         if (lo?.kLevel == KLevel.K3 && q.scenario.isNullOrBlank()) errors += "$where: K3 question needs a scenario"
         if (q.scenario?.isBlank() == true) errors += "$where: scenario must be null or non-blank"
+        if (!q.scenario.orEmpty().tablesHaveHeaderRows()) errors += "$where: every table needs a header row followed by |---|"
         val text = q.allText()
         BANNED_TERMS.filter { text.contains(it) }.forEach { errors += "$where: use syllabus terminology instead of 「$it」" }
         return errors
+    }
+
+    /**
+     * The first row of a table is shown in bold and read to screen-reader users as the column names of every
+     * other row, so it must really be a header: the line after it has to be the Markdown separator.
+     * Lines inside a ``` code block are code, not table rows, as in `parseScenario`.
+     */
+    private fun String.tablesHaveHeaderRows(): Boolean {
+        var inCode = false
+        var previousWasTableRow = false
+        val lines = lines().map { it.trim() }
+        lines.forEachIndexed { index, line ->
+            if (line.startsWith("```")) {
+                inCode = !inCode
+                previousWasTableRow = false
+                return@forEachIndexed
+            }
+            val isTableRow = !inCode && line.startsWith("|")
+            if (isTableRow && !previousWasTableRow && lines.getOrNull(index + 1)?.let { TABLE_SEPARATOR.matches(it) } != true) {
+                return false
+            }
+            previousWasTableRow = isTableRow
+        }
+        return true
+    }
+
+    @Test
+    fun tableHeaderRule_requiresASeparator_andIgnoresCodeBlocks() {
+        assertTrue("| a | b |\n|---|---|\n| 1 | 2 |".tablesHaveHeaderRows())
+        assertTrue("説明\n| a | b |\n|:--|--:|\n| 1 | 2 |\n続き".tablesHaveHeaderRows())
+        assertFalse("header is missing", "| 1 | 2 |\n| 3 | 4 |".tablesHaveHeaderRows())
+        assertFalse("second table has no header", "| a |\n|---|\n| 1 |\n文\n| 2 |\n| 3 |".tablesHaveHeaderRows())
+        // A code line that starts with | is not a table.
+        assertTrue("```\n| x | y\nif (a || b)\n```".tablesHaveHeaderRows())
+        assertTrue("```\n| x |\n```\n| a |\n|---|\n| 1 |".tablesHaveHeaderRows())
     }
 
     private fun targetFor(kLevel: KLevel) = if (kLevel == KLevel.K3) K3_TARGET else K1_K2_TARGET

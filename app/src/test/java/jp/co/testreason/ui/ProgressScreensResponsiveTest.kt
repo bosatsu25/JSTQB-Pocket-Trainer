@@ -34,7 +34,7 @@ class ProgressScreensResponsiveTest(private val device: TestDevice) {
             )
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("復習を開始（3問）").performScrollTo().assertIsDisplayed()
     }
 
@@ -53,7 +53,7 @@ class ProgressScreensResponsiveTest(private val device: TestDevice) {
             AnalyticsContent(uiState = ScreenFixtures.dashboard)
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("K3（適用）", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("用語の混同：1回").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("弱点 50%").performScrollTo().assertIsDisplayed()
