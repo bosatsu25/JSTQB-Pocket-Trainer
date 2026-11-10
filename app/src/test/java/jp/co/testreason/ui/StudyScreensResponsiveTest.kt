@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import jp.co.testreason.core.datastore.DarkThemeConfig
 import jp.co.testreason.core.datastore.UserPreferences
+import jp.co.testreason.feature.about.AboutContent
 import jp.co.testreason.feature.chapter.ChapterSelectContent
 import jp.co.testreason.feature.chapter.ChapterSelectUiState
 import jp.co.testreason.feature.chapter.chapterOverview
@@ -76,7 +77,8 @@ class StudyScreensResponsiveTest(private val device: TestDevice) {
                     preferences = UserPreferences(dailyGoalQuestions = 10, darkThemeConfig = DarkThemeConfig.DARK)
                 ),
                 onSelectTheme = {},
-                onSelectDailyGoal = {}
+                onSelectDailyGoal = {},
+                onOpenAbout = {}
             )
         }
         compose.assertNoHorizontalOverflow()
@@ -86,6 +88,22 @@ class StudyScreensResponsiveTest(private val device: TestDevice) {
         compose.onNodeWithText("ライト").performScrollTo().assertIsNotSelected()
         compose.onNodeWithText("10問").performScrollTo().assertIsSelected()
         compose.onNodeWithText("20問").performScrollTo().assertIsNotSelected()
+        compose.onNodeWithText("このアプリについて").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun about() {
+        val host = compose.setResponsiveContent(device) { AboutContent(versionName = "1.0.0") }
+        compose.assertNoHorizontalOverflow()
+        compose.assertAccessible(host)
+        compose.onNodeWithText("バージョン 1.0.0").assertIsDisplayed()
+        // What ADR-0006 requires the app to show.
+        compose.onNodeWithText("非公式の学習アプリです").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("承認・推奨・認定を受けたものではありません", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("登録商標です", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Version 2023V4.0.J02（© ISTQB®、日本語翻訳 © JSTQB®）", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("インターネットに接続する権限を持たず", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("https://www.apache.org/licenses/LICENSE-2.0", substring = true).performScrollTo().assertIsDisplayed()
     }
 
     @Test

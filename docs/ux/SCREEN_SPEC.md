@@ -178,5 +178,23 @@ Stored in DataStore (`UserPreferencesRepository`); a change applies at once and 
   read, so it never starts in the wrong theme and then switches.
 - **1日の目標問題数**: 5 (default) / 10 / 20 — the size of the daily session on Home.
 - A stored value this version does not know falls back to the default.
+- **このアプリについて** opens the about screen (§11).
 - **Not implemented**: the study reminder notification. It needs a new dependency (WorkManager) and the
   notification permission; waiting for the owner's decision in #21.
+
+---
+
+## 11. About (`AboutScreen`) (#25, ADR-0006)
+Reached from Settings. Shows what ADR-0006 requires the app to show, plus what a learner needs to know about
+their data:
+
+- App name and version (read from the installed package).
+- **Unofficial**: not affiliated with, endorsed by or certified by ISTQB® / JSTQB®; both are registered trademarks.
+- **Syllabus**: LO ids and K-levels refer to the JSTQB® Foundation Level syllabus (version from `Syllabus.VERSION`,
+  © ISTQB®, Japanese translation © JSTQB®). Questions, explanations and glossary summaries are this app's own;
+  the official syllabus is the reference. The mock exam follows the published exam structure and does not predict
+  the real result.
+- **Data**: study records and settings stay on the device; the app has no network permission
+  (`AppManifestTest` fails if one is ever added). Device backup may include the data, per the device's settings.
+- **Open-source licences**: the shipped libraries and the Apache License 2.0 with its URL.
+  The full licence text is not bundled yet (open in #25).
