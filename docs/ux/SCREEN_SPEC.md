@@ -13,6 +13,7 @@
    - 今日の復習 (due count) → Review screen
    - 弱点克服 (weak count) → starts a weakness session, or a message when there is none
    - 章別学習 → Chapter Select screen
+   - 周回モード → Rapid Drill setup (§8)
    - 学習分析 → learning analytics
    - 模擬試験 → Mock Exam intro
    - The menu wraps (FlowRow) on narrow screens or large fonts.
@@ -110,3 +111,31 @@ from the tap until the screen is shown again: a second tap must not create a sec
 Screens that stay on the back stack unlock in `onScreenShown()`; screens removed from the back stack stay locked.
 If nothing could be started (empty queue or chapter), the button unlocks immediately.
 
+
+---
+
+## 8. Rapid Drill (`DrillSetupScreen` → `DrillScreen`) — 周回モード (#32)
+For getting through many questions quickly: see the answer at once, repeat until every question is answered
+correctly, and only then dig into the reasons. Behaviour rules are in `LEARNING_LOOP.md` ("Rapid Drill").
+
+### Setup
+- A card explains the mode and states that drill answers do **not** change mastery, review schedule or weak questions.
+- Scope buttons: 全範囲から (20問 / 40問), and per chapter (10問 / 20問 / 全N問). Counts not smaller than the
+  scope are hidden. An empty chapter shows a note and no button.
+
+### Drill
+1. **Top Bar**: "周回モード x / y クリア" (questions answered correctly so far in this lap).
+2. **Question card**: LO id, scenario (if any), stem. Two panes (question | choices) from 720dp.
+3. **Choices**: a single-answer question is judged on the tap; a multi-answer question when the required number
+   is chosen (a choice can be deselected before that). No confidence selector and no submit button.
+4. **"分からないので答えを見る"**: reveals the answer without answering; counts as a miss.
+5. **After the reveal** (same screen, choices locked): verdict text on the choices ("正解" / "あなたの解答（不正解）",
+   never colour alone), headline + explanation, primary **"次へ"**, and **"なぜ？（各選択肢の理由を見る）"** which
+   shows why each choice is right or wrong. The reasons are closed again on the next question.
+6. **Next question**: starts scrolled to the top. Taps on choices or "答えを見る" within 400 ms after "次へ" are
+   ignored — a tap is the answer in this mode, so the second tap of a double tap on "次へ" must not answer the
+   next question.
+
+### Lap summary
+- 1周クリア: first-try correct count, number of answers, elapsed time, seconds per answer.
+- Actions: "間違えたN問だけもう1周" (only when something was missed), "同じ問題でもう1周", "章別学習で理由を確認", "ホームへ戻る".

@@ -12,6 +12,10 @@ import jp.co.testreason.feature.analytics.AnalyticsScreen
 import jp.co.testreason.feature.analytics.AnalyticsViewModel
 import jp.co.testreason.feature.chapter.ChapterSelectScreen
 import jp.co.testreason.feature.chapter.ChapterSelectViewModel
+import jp.co.testreason.feature.drill.DrillScreen
+import jp.co.testreason.feature.drill.DrillSetupScreen
+import jp.co.testreason.feature.drill.DrillSetupViewModel
+import jp.co.testreason.feature.drill.DrillViewModel
 import jp.co.testreason.feature.explanation.ExplanationScreen
 import jp.co.testreason.feature.explanation.ExplanationViewModel
 import jp.co.testreason.feature.home.HomeScreen
@@ -57,6 +61,13 @@ sealed interface Screen {
     object ChapterSelectRoute : Screen
 
     @Serializable
+    object DrillSetupRoute : Screen
+
+    /** [chapter] 0 = every chapter, [count] 0 = all questions of the scope. */
+    @Serializable
+    data class DrillRoute(val chapter: Int, val count: Int) : Screen
+
+    @Serializable
     object MockExamIntroRoute : Screen
 
     @Serializable
@@ -85,6 +96,7 @@ fun TestReasonNavHost(
                 },
                 onOpenReview = { navController.navigate(Screen.ReviewRoute) },
                 onOpenChapters = { navController.navigate(Screen.ChapterSelectRoute) },
+                onOpenDrill = { navController.navigate(Screen.DrillSetupRoute) },
                 onOpenMockExam = { navController.navigate(Screen.MockExamIntroRoute) },
                 onOpenAnalytics = { navController.navigate(Screen.AnalyticsRoute) }
             )
@@ -107,6 +119,30 @@ fun TestReasonNavHost(
             ChapterSelectScreen(
                 viewModel = viewModel,
                 onStartQuiz = { sessionId -> navController.navigate(Screen.QuizRoute(sessionId)) }
+            )
+        }
+
+        composable<Screen.DrillSetupRoute> {
+            val viewModel: DrillSetupViewModel = hiltViewModel()
+            DrillSetupScreen(
+                viewModel = viewModel,
+                onStartDrill = { chapter, count ->
+                    // launchSingleTop: a double tap must not open the same drill twice.
+                    navController.navigate(Screen.DrillRoute(chapter ?: 0, count ?: 0)) { launchSingleTop = true }
+                }
+            )
+        }
+
+        composable<Screen.DrillRoute> {
+            val viewModel: DrillViewModel = hiltViewModel()
+            DrillScreen(
+                viewModel = viewModel,
+                onOpenChapters = {
+                    navController.navigate(Screen.ChapterSelectRoute) {
+                        popUpTo<Screen.HomeRoute> { inclusive = false }
+                    }
+                },
+                onNavigateHome = { navController.popBackStack<Screen.HomeRoute>(inclusive = false) }
             )
         }
 

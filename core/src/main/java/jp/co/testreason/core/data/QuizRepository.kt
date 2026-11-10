@@ -63,6 +63,12 @@ interface QuizRepository {
     /** Up to [count] questions of one learning objective, in the same priority order as chapter sessions. */
     suspend fun createLearningObjectiveSession(learningObjectiveId: String, count: Int): QuizSession?
 
+    /**
+     * Questions for the rapid drill (周回モード) in random order: one chapter, or every chapter when
+     * [chapter] is null; [count] null means all of them. Creates no session and records nothing.
+     */
+    suspend fun getDrillQuestions(chapter: Int?, count: Int?): List<Question>
+
     suspend fun getSessionById(id: String): QuizSession?
     fun getActiveSession(): Flow<QuizSession?>
     
@@ -183,6 +189,16 @@ class QuizRepositoryImpl @Inject constructor(
         syncBundledQuestions()
         val questions = questionDao.getActiveQuestionsByLo(learningObjectiveId).map { it.id }
         return createSession(StudyMode.CUSTOM, prioritise(questions).take(count))
+    }
+
+    override suspend fun getDrillQuestions(chapter: Int?, count: Int?): List<Question> {
+        syncBundledQuestions()
+        val pool = if (chapter != null) {
+            questionDao.getActiveQuestionsByLoPrefix("FL-$chapter.").map { it.toDomain() }
+        } else {
+            getAllQuestions().first()
+        }
+        return pool.shuffled().let { if (count != null) it.take(count) else it }
     }
 
     /** Unseen (shuffled) -> weak (oldest answer first) -> others (oldest answer first). */

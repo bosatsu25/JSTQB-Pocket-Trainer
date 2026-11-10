@@ -83,6 +83,20 @@ correct LOW = 0.5, correct GUESS = 0.25, incorrect = 0.
 - **Review**: all due questions. **Weakness**: up to 5 weak questions.
 - When a queue is empty no session is created; the UI says there is nothing to study in that mode.
 
+## Rapid Drill (周回モード)
+A separate, lightweight loop: `question -> tap -> answer shown -> next`, without confidence, submit or an
+explanation screen.
+
+- A lap is a fixed set of questions in random order. A wrong answer, or looking at the answer without answering,
+  moves the question to the end of the lap; the lap ends when every question has been answered correctly once.
+- "First-try correct" counts questions never missed in the lap. A new lap can repeat all questions or only the missed ones.
+- **Drill answers are not recorded**: no attempt, no mastery change, no review schedule, no weak-question change,
+  no session. Reason: in a drill the learner often answers from memory of the previous lap. Recording those
+  answers would raise mastery and stretch review intervals without evidence of understanding, and misses made
+  while skimming would flood the weakness queue. Understanding is measured by the normal loop and the mock exam.
+- The lap in progress is kept in `SavedStateHandle` (question ids, queue, missed, answer count, start time), so it
+  survives process death but is not resumable after leaving the screen.
+
 ## Learning Objective States (Analytics)
 | State | Rule |
 |---|---|
