@@ -66,13 +66,19 @@ class AnalyticsViewModel @Inject constructor(
     /** Starts a short session on one LO, typically a weak one. */
     fun startObjective(learningObjectiveId: String) {
         if (_uiState.value.isStarting) return
+        _uiState.update { it.copy(isStarting = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isStarting = true) }
             val session = quizRepository.createLearningObjectiveSession(learningObjectiveId, OBJECTIVE_SESSION_SIZE)
-            _uiState.update { it.copy(isStarting = false) }
-            if (session != null) _events.emit(AnalyticsEvent.NavigateToQuiz(session.id))
+            if (session != null) {
+                // Stay locked while navigating away; onScreenShown() unlocks on return.
+                _events.emit(AnalyticsEvent.NavigateToQuiz(session.id))
+            } else {
+                _uiState.update { it.copy(isStarting = false) }
+            }
         }
     }
+
+    fun onScreenShown() = _uiState.update { it.copy(isStarting = false) }
 
     private companion object {
         const val OBJECTIVE_SESSION_SIZE = 5

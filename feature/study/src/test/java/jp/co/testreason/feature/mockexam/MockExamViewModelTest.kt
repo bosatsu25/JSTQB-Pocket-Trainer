@@ -63,6 +63,19 @@ class MockExamViewModelTest {
         }
         assertEquals(75, env.mockExamRepository.observeExam(id).first()!!.durationMinutes)
         vm.uiState.first { it.resumableExamId == id }
+        assertTrue("locked while navigating away", vm.uiState.value.isStarting)
+
+        // Second tap is ignored; after coming back, only the open exam can be resumed - no second exam.
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
+            vm.start()
+            vm.resume()
+            expectNoEvents()
+
+            env.clock.now += 1
+            vm.onScreenShown()
+            vm.start()
+            assertEquals(MockExamIntroEvent.NavigateToExam(id), awaitItem())
+        }
     }
 
     @Test
@@ -132,6 +145,14 @@ class MockExamViewModelTest {
             vm.startWeaknessReview()
             val event = awaitItem() as MockExamResultEvent.NavigateToQuiz
             assertEquals(listOf(questions[26].question.id), env.quizRepository.getSessionById(event.sessionId)!!.questionIds)
+
+            assertTrue(vm.uiState.value.isStarting)
+            vm.startWeaknessReview()
+            expectNoEvents()
+            env.clock.now += 1
+            vm.onScreenShown()
+            vm.startWeaknessReview()
+            awaitItem()
         }
     }
 }

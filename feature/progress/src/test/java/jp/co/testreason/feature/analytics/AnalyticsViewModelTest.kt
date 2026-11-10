@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -51,6 +52,14 @@ class AnalyticsViewModelTest {
             val session = env.quizRepository.getSessionById(event.sessionId)!!
             assertEquals(StudyMode.CUSTOM, session.mode)
             assertEquals(listOf(SampleData.multi.id), session.questionIds)
+
+            assertTrue(vm.uiState.value.isStarting)
+            vm.startObjective("FL-1.1.1")
+            expectNoEvents()
+            env.clock.now += 1
+            vm.onScreenShown()
+            vm.startObjective("FL-1.1.1")
+            awaitItem()
         }
     }
 }

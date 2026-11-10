@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -47,6 +48,10 @@ class ReviewViewModelTest {
             vm.startDueReviewSession()
             val event = awaitItem() as ReviewUiEvent.NavigateToQuiz
             assertEquals(StudyMode.REVIEW, env.quizRepository.getSessionById(event.sessionId)!!.mode)
+
+            assertTrue("locked: this screen is leaving the back stack", vm.uiState.value.isStarting)
+            vm.startDueReviewSession()
+            expectNoEvents()
         }
     }
 
@@ -57,6 +62,7 @@ class ReviewViewModelTest {
 
         vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startDueReviewSession()
+            vm.uiState.first { !it.isStarting } // nothing to start: unlocked again
             expectNoEvents()
         }
         assertEquals(null, env.quizRepository.getActiveSession().first())

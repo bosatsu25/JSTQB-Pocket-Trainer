@@ -65,13 +65,19 @@ class ChapterSelectViewModel @Inject constructor(
     /** [count] null = all questions of the chapter. */
     fun startChapter(chapter: Int, count: Int?) {
         if (_uiState.value.isStarting) return
+        _uiState.update { it.copy(isStarting = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isStarting = true) }
             val session = quizRepository.createChapterSession(chapter, count)
-            _uiState.update { it.copy(isStarting = false) }
-            if (session != null) _events.emit(ChapterSelectEvent.NavigateToQuiz(session.id))
+            if (session != null) {
+                // Stay locked while navigating away; onScreenShown() unlocks on return.
+                _events.emit(ChapterSelectEvent.NavigateToQuiz(session.id))
+            } else {
+                _uiState.update { it.copy(isStarting = false) }
+            }
         }
     }
+
+    fun onScreenShown() = _uiState.update { it.copy(isStarting = false) }
 }
 
 fun chapterOverview(questions: List<Question>, attempts: List<Attempt>, masteries: List<Mastery>): List<ChapterOverview> {

@@ -57,8 +57,20 @@ class MockExamRepositoryTest {
         assertEquals(id, exams.observeUnsubmittedExamId().first())
         assertNull(quiz.getActiveSession().first())
         assertEquals(StudyMode.MOCK_EXAM, quiz.getSessionById(id)!!.mode)
+    }
+
+    @Test
+    fun onlyOneExamCanBeOpen_aNewOneStartsAfterSubmission() = runTest {
+        val first = start()
         time.timeMs += 1
-        assertEquals(75, exams.observeExam(start(extended = true)).first()!!.durationMinutes)
+        assertEquals("an unsubmitted exam is returned instead of a second one", first, start(extended = true))
+        assertEquals(60, exams.observeExam(first).first()!!.durationMinutes)
+
+        exams.submit(first)
+        time.timeMs += 1
+        val second = start(extended = true)
+        assertTrue(second != first)
+        assertEquals(75, exams.observeExam(second).first()!!.durationMinutes)
     }
 
     @Test

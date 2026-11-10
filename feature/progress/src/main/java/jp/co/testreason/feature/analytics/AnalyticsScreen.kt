@@ -42,6 +42,7 @@ fun AnalyticsScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
+        viewModel.onScreenShown()
         viewModel.events.collect { event ->
             when (event) {
                 is AnalyticsEvent.NavigateToQuiz -> onStartQuiz(event.sessionId)

@@ -46,6 +46,12 @@ interface MockExamDao {
     )
     fun observeUnsubmittedExam(): Flow<MockExamEntity?>
 
+    @Query(
+        "SELECT m.* FROM mock_exams m JOIN quiz_sessions s ON s.id = m.sessionId " +
+            "WHERE m.submittedAt IS NULL ORDER BY s.startedAt DESC LIMIT 1"
+    )
+    suspend fun getUnsubmittedExam(): MockExamEntity?
+
     @Query("UPDATE mock_exams SET submittedAt = :submittedAt WHERE sessionId = :sessionId AND submittedAt IS NULL")
     suspend fun markSubmitted(sessionId: String, submittedAt: Long): Int
 

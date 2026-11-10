@@ -74,6 +74,7 @@ fun ReviewContent(
             } else {
                 Button(
                     onClick = onStartReview,
+                    enabled = !uiState.isStarting,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {

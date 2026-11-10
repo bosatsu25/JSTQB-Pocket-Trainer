@@ -46,12 +46,24 @@ class MockExamResponsiveTest(private val device: TestDevice) {
     @Test
     fun intro() {
         val host = compose.setResponsiveContent(device) {
+            MockExamIntroContent(MockExamIntroUiState(), onExtendedTimeChange = {}, onStart = {}, onResume = {})
+        }
+        compose.assertNoHorizontalOverflow()
+        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.onNodeWithText("時間延長（75分）").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("模擬試験を開始").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("途中の模擬試験を再開").assertDoesNotExist()
+    }
+
+    @Test
+    fun introWithAnOpenExam_offersOnlyResume() {
+        val host = compose.setResponsiveContent(device) {
             MockExamIntroContent(MockExamIntroUiState(resumableExamId = "s0"), onExtendedTimeChange = {}, onStart = {}, onResume = {})
         }
         compose.assertNoHorizontalOverflow()
         compose.assertTouchTargetsAtLeast48dp(host)
         compose.onNodeWithText("途中の模擬試験を再開").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("模擬試験を開始").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("模擬試験を開始").assertDoesNotExist()
     }
 
     @Test

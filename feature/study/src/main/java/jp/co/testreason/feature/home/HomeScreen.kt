@@ -61,6 +61,7 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
+        viewModel.onScreenShown()
         viewModel.events.collect { event ->
             when (event) {
                 is HomeUiEvent.NavigateToQuiz -> onStartQuiz(event.sessionId)
@@ -100,7 +101,7 @@ fun HomeContent(
     ) { padding ->
         ResponsiveScreenColumn(contentPadding = padding) {
             MasteryCard(uiState.averageMastery)
-            uiState.resumableSession?.let { ResumeCard(it, actions.onResume) }
+            uiState.resumableSession?.let { ResumeCard(it, enabled = !uiState.isLoading, onResume = actions.onResume) }
             DailyCard(isLoading = uiState.isLoading, onStart = actions.onStartDaily)
 
             Text("学習メニュー", style = MaterialTheme.typography.titleMedium)
@@ -138,7 +139,7 @@ private fun MasteryCard(averageMastery: Float) {
 }
 
 @Composable
-private fun ResumeCard(session: QuizSession, onResume: () -> Unit) {
+private fun ResumeCard(session: QuizSession, enabled: Boolean, onResume: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text("学習の続き", style = MaterialTheme.typography.titleMedium)
@@ -148,7 +149,7 @@ private fun ResumeCard(session: QuizSession, onResume: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(onClick = onResume, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            OutlinedButton(onClick = onResume, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                 Text("続きから再開")
             }
         }

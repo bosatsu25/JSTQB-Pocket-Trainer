@@ -89,7 +89,10 @@
 Format and sources: `docs/product/EXAM_FORMAT.md` (ISTQB Exam Structure and Rules Tables v1.18, JSTQB exam guide).
 
 1. **Intro**: rules (40 questions, 60 minutes, pass at 26 = 65%, official K/chapter distribution, no explanations
-   until submission), optional 75-minute extended time, resume button for an unsubmitted exam, start button.
+   until submission), optional 75-minute extended time, start button.
+   **Only one exam can be open.** While an exam is unsubmitted the intro shows a note and a resume button instead
+   of the extended-time switch and the start button; a new exam can start after that one is submitted (resuming
+   after the deadline submits it at once). The repository enforces the same rule.
 2. **Exam**: remaining time in the top bar (with a text warning under 5 minutes), question and choices (radio /
    checkbox), review flag, previous / next, a 40-cell navigator whose cells state answered (✓) and flagged (?) in
    text and in their content description, and a submit button with a confirmation dialog that states the number of
@@ -98,4 +101,12 @@ Format and sources: `docs/product/EXAM_FORMAT.md` (ISTQB Exam Structure and Rule
 3. **Result**: pass-line reached / not reached, score vs pass line, unanswered count, scores by chapter and by
    K-level, a CTA to start a weakness session with the wrong answers, and every question with its verdict;
    tapping a row shows the stem, the correct vs given answer and the explanation.
+
+---
+
+## 7. Starting a Session (all screens)
+A button that starts a session (Home, result, chapter select, analytics, review, mock exam intro / result) is locked
+from the tap until the screen is shown again: a second tap must not create a second session or navigate twice.
+Screens that stay on the back stack unlock in `onScreenShown()`; screens removed from the back stack stay locked.
+If nothing could be started (empty queue or chapter), the button unlocks immediately.
 

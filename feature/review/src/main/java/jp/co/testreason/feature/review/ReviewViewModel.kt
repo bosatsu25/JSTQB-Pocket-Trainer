@@ -11,12 +11,14 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ReviewUiState(
     val isLoading: Boolean = true,
-    val dueQuestions: List<Question> = emptyList()
+    val dueQuestions: List<Question> = emptyList(),
+    val isStarting: Boolean = false
 )
 
 sealed interface ReviewUiEvent {
@@ -40,21 +42,25 @@ class ReviewViewModel @Inject constructor(
 
     fun loadReviewQueue() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.update { it.copy(isLoading = true) }
             quizRepository.observeDueReviewQuestions().collect { questions ->
-                _uiState.value = ReviewUiState(
-                    isLoading = false,
-                    dueQuestions = questions
-                )
+                _uiState.update { it.copy(isLoading = false, dueQuestions = questions) }
             }
         }
     }
 
     fun startDueReviewSession() {
+        if (_uiState.value.isStarting) return
+        _uiState.update { it.copy(isStarting = true) }
         viewModelScope.launch {
-            // The queue may have emptied since it was displayed; then there is nothing to start.
-            val session = quizRepository.createDueReviewSession() ?: return@launch
-            _events.emit(ReviewUiEvent.NavigateToQuiz(session.id))
+            val session = quizRepository.createDueReviewSession()
+            if (session != null) {
+                // Stay locked: this screen is removed from the back stack when the session opens.
+                _events.emit(ReviewUiEvent.NavigateToQuiz(session.id))
+            } else {
+                // The queue emptied since it was displayed; there is nothing to start.
+                _uiState.update { it.copy(isStarting = false) }
+            }
         }
     }
 }

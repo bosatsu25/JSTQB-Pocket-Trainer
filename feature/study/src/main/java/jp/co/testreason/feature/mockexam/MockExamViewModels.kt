@@ -68,24 +68,33 @@ class MockExamIntroViewModel @Inject constructor(
 
     fun setExtendedTime(enabled: Boolean) = _uiState.update { it.copy(extendedTime = enabled) }
 
+    /** Unlocks the buttons when the intro is shown (again). */
+    fun onScreenShown() = _uiState.update { it.copy(isStarting = false) }
+
     fun resume() {
-        val id = _uiState.value.resumableExamId ?: return
+        val state = _uiState.value
+        val id = state.resumableExamId ?: return
+        if (state.isStarting) return
+        _uiState.update { it.copy(isStarting = true) }
         viewModelScope.launch { _events.emit(MockExamIntroEvent.NavigateToExam(id)) }
     }
 
     fun start() {
         if (_uiState.value.isStarting) return
+        _uiState.update { it.copy(isStarting = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isStarting = true) }
-            val result = mockExamRepository.startMockExam(_uiState.value.extendedTime)
-            _uiState.update { it.copy(isStarting = false) }
-            _events.emit(
-                when (result) {
-                    is MockExamStart.Started -> MockExamIntroEvent.NavigateToExam(result.sessionId)
-                    is MockExamStart.NotEnoughQuestions ->
-                        MockExamIntroEvent.ShowMessage("問題が足りない出題範囲があるため、模擬試験を組めません（${result.missingGroups.size}グループ）。")
+            when (val result = mockExamRepository.startMockExam(_uiState.value.extendedTime)) {
+                // Stay locked while navigating away; onScreenShown() unlocks on return.
+                is MockExamStart.Started -> _events.emit(MockExamIntroEvent.NavigateToExam(result.sessionId))
+                is MockExamStart.NotEnoughQuestions -> {
+                    _uiState.update { it.copy(isStarting = false) }
+                    _events.emit(
+                        MockExamIntroEvent.ShowMessage(
+                            "問題が足りない出題範囲があるため、模擬試験を組めません（${result.missingGroups.size}グループ）。"
+                        )
+                    )
                 }
-            )
+            }
         }
     }
 }
@@ -246,11 +255,17 @@ class MockExamResultViewModel @Inject constructor(
     /** Wrong exam answers are recorded as attempts, so the weakness queue already contains them. */
     fun startWeaknessReview() {
         if (_uiState.value.isStarting) return
+        _uiState.update { it.copy(isStarting = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isStarting = true) }
             val session = quizRepository.createWeaknessSession()
-            _uiState.update { it.copy(isStarting = false) }
-            if (session != null) _events.emit(MockExamResultEvent.NavigateToQuiz(session.id))
+            if (session != null) {
+                // Stay locked while navigating away; onScreenShown() unlocks on return.
+                _events.emit(MockExamResultEvent.NavigateToQuiz(session.id))
+            } else {
+                _uiState.update { it.copy(isStarting = false) }
+            }
         }
     }
+
+    fun onScreenShown() = _uiState.update { it.copy(isStarting = false) }
 }

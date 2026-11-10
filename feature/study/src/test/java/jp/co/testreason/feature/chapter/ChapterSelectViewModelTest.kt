@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -48,6 +50,34 @@ class ChapterSelectViewModelTest {
             val session = env.quizRepository.getSessionById(event.sessionId)!!
             assertEquals(StudyMode.CHAPTER, session.mode)
             assertEquals(listOf(SampleData.single2.id, SampleData.single1.id), session.questionIds)
+        }
+    }
+
+    @Test
+    fun chapterButtons_stayLockedAfterStart_untilTheScreenIsShownAgain() = runTest {
+        val vm = ChapterSelectViewModel(env.quizRepository, env.masteryRepository)
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
+            vm.startChapter(1, count = 1)
+            awaitItem()
+            assertTrue(vm.uiState.value.isStarting)
+            vm.startChapter(4, count = null)
+            expectNoEvents()
+
+            env.clock.now += 1
+            vm.onScreenShown()
+            assertFalse(vm.uiState.value.isStarting)
+            vm.startChapter(4, count = null)
+            awaitItem()
+        }
+    }
+
+    @Test
+    fun emptyChapter_doesNotLockTheScreen() = runTest {
+        val vm = ChapterSelectViewModel(env.quizRepository, env.masteryRepository)
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
+            vm.startChapter(6, count = 5) // the sample bank has no chapter 6 question
+            vm.uiState.first { !it.isStarting }
+            expectNoEvents()
         }
     }
 }
