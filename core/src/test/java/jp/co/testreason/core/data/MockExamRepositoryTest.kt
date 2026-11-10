@@ -7,7 +7,9 @@ import jp.co.testreason.core.content.BundledQuestionSource
 import jp.co.testreason.core.database.TestReasonDatabase
 import jp.co.testreason.core.domain.ExamTestBank
 import jp.co.testreason.core.domain.SpacedReviewEngine
+import jp.co.testreason.core.model.Choice
 import jp.co.testreason.core.model.MockExamStart
+import jp.co.testreason.core.model.Question
 import jp.co.testreason.core.model.StudyMode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -31,10 +33,11 @@ class MockExamRepositoryTest {
     private val time = MutableTimeProvider(1_000_000L)
 
     @Before
-    fun setUp() {
+    fun setUp() = build(ExamTestBank.questions(perLearningObjective = 2))
+
+    private fun build(bank: List<Question>) {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), TestReasonDatabase::class.java)
             .allowMainThreadQueries().build()
-        val bank = ExamTestBank.questions(perLearningObjective = 2)
         val engine = SpacedReviewEngine(time)
         val mastery = MasteryRepositoryImpl(db.masteryDao(), time)
         quiz = QuizRepositoryImpl(db, mastery, engine, time, BundledQuestionSource { bank.map { BundledQuestion(it, true) } })
@@ -71,6 +74,50 @@ class MockExamRepositoryTest {
         val second = start(extended = true)
         assertTrue(second != first)
         assertEquals(75, exams.observeExam(second).first()!!.durationMinutes)
+    }
+
+    @Test
+    fun selectChoice_appliesEachTapToTheSavedAnswer() = runTest {
+        // Every question asks for two of five choices.
+        db.close()
+        build(
+            ExamTestBank.questions(perLearningObjective = 2).map { question ->
+                question.copy(selectCount = 2, choices = listOf("A", "B", "C", "D", "E").map { Choice(it, "選択肢$it", it in setOf("A", "B"), "解説") })
+            }
+        )
+        val id = start()
+        val q = exams.observeExam(id).first()!!.questions[0].question.id
+        suspend fun selected() = exams.observeExam(id).first()!!.questions[0].selectedChoiceIds
+
+        assertTrue(exams.selectChoice(id, q, "A"))
+        assertTrue(exams.selectChoice(id, q, "B"))
+        assertEquals(setOf("A", "B"), selected())
+
+        exams.selectChoice(id, q, "C") // already two: ignored
+        assertEquals(setOf("A", "B"), selected())
+        exams.selectChoice(id, q, "A") // deselect
+        assertEquals(setOf("B"), selected())
+        assertFalse(exams.observeExam(id).first()!!.questions[0].isAnswered)
+
+        exams.toggleFlag(id, q)
+        exams.selectChoice(id, q, "E")
+        val item = exams.observeExam(id).first()!!.questions[0]
+        assertEquals(setOf("B", "E"), item.selectedChoiceIds)
+        assertTrue(item.flagged)
+
+        exams.submit(id)
+        assertFalse(exams.selectChoice(id, q, "B"))
+    }
+
+    @Test
+    fun selectChoice_replacesTheChoiceOfASingleAnswerQuestion() = runTest {
+        val id = start()
+        val q = exams.observeExam(id).first()!!.questions[0].question.id
+
+        exams.selectChoice(id, q, "B")
+        exams.selectChoice(id, q, "C")
+
+        assertEquals(setOf("C"), exams.observeExam(id).first()!!.questions[0].selectedChoiceIds)
     }
 
     @Test

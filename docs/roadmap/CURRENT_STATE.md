@@ -11,7 +11,7 @@
 - **Question Bank**: 229 questions covering all 64 LOs of syllabus 2023V4.0.J02; glossary of all 94 chapter keywords
 - **Module Architecture**: 5 Modules (`:app`, `:core`, `:feature:study`, `:feature:review`, `:feature:progress`)
 - **Integrity Gate / Build Foundation**: Final Cleanup Completed
-- **Known Blockers**: None for this wave. Device / emulator E2E is still not run (no AVD in CI/container).
+- **Known Blockers**: None for this wave. Nothing has run on a device or emulator (no AVD in CI/container); journeys run on the JVM.
 
 ---
 
@@ -33,7 +33,7 @@
 | **Android Lint Check** | `gradlew.bat lintDebug` | **PASS** | 0 errors across 5 modules |
 | **Strict JDK 17 Validation** | `scripts/verify.sh` (Linux, JDK 17.0) + GitHub Actions `ci.yml` (Temurin 17) | **PASS** | `assembleDebug testDebugUnitTest lintDebug detekt` green locally on JDK 17; CI runs the same tasks on every PR. `verify.ps1` remains for Windows hosts |
 | **Navigation 2.8.5 Type-Safe Routes** | `AppNavHost.kt` + `kotlinx.serialization` | **PASS** | Maintained stable Type-Safe Navigation Compose 2.8.5 |
-| **Device / E2E Verification** | Physical Device / Emulator | **NOT_RUN** | No connected ADB device / AVD in CLI env |
+| **Device Verification** | Physical Device / Emulator | **NOT_RUN** | No connected ADB device / AVD in CLI env. Journeys run on the JVM instead (see E2E Journeys below) |
 
 | **LO Master (64 LOs)** | `SyllabusTest` | **PASS** | 64 LOs, per-chapter counts 14/10/8/14/16/2, eight K3 LOs, 1135 minutes |
 | **Room v1→v2 Migration** | `MigrationTest.migrate1To2_keepsQuestionsAndAttemptsAndAddsDefaults` | **PASS** | `MigrationTestHelper.runMigrationsAndValidate` against exported `1.json`/`2.json`; existing rows and attempts preserved |
@@ -55,12 +55,17 @@
 | **Session Start Guards (#28)** | Home / Result / ChapterSelect / Analytics / Review / MockExam ViewModel tests, `MockExamRepositoryTest.onlyOneExamCanBeOpen…`, `MockExamResponsiveTest.introWithAnOpenExam…` | **PASS** | Second tap ignored until the screen is shown again; one open mock exam at a time. Mutation check: removing the lock in Home and ChapterSelect makes their tests fail |
 | **Rapid Drill (#32)** | `DrillLapTest` (4), `DrillViewModelTest` (15), `DrillScreensResponsiveTest` (30) | **PASS** | Answer shown on the tap, misses re-queued until the lap is cleared, lap restored from saved state (shown answer, finish time, retired questions dropped); a finished lap leaves attempts / mastery / weak / due / sessions empty; a double tap on "次へ" does not answer the next question; each question starts at the top (mutation-checked). UI not exercised on a device |
 | **Glossary (#4)** | `GlossaryContentValidationTest` (3), `GlossaryViewModelTest` (5), `GlossaryScreensResponsiveTest` (25) | **PASS** | 94 keywords, per-chapter counts 28/17/10/18/25/1, one line ≤ 60 chars, banned terminology; 91/94 keywords mentioned by the question bank (ratchet on the other 3); cards re-queue まだ, double tap cannot grade. 14-char overlap with the syllabus: 3 runs, all bare term enumerations. UI not exercised on a device |
+| **E2E Journeys (#29)** | `AppJourneyTest` (6), `ProcessRecreationTest` (3), `MockExamRepositoryTest.selectChoice…` (2), `MockExamViewModelTest.twoQuickTaps…`, `QuizViewModelTest.selectionAndConfidence_surviveProcessDeath…` | **PASS** | Real Hilt graph, Room and bundled content on Robolectric; 6 consecutive runs green. Mutation checks: the old mock exam selection code fails the quick-tap test; removing the quiz restore fails the recreation journey |
 | **Copyright Check (ADR-0006)** | Reviewer pass + 18-char overlap script against the syllabus text (not committed: the syllabus text is copyrighted) | **PASS** | Seven independent reviewers (not the authors) re-checked every key against the syllabus (K3 answers recomputed) and rewrote copied text; 18-char overlap hits went from 178 to 0 across all 8 files. Key changes: none. Wording fixes for ambiguity: c1-016, c2-025, c3-001; explanation fixes: c4-011, c4-016, c5-028 |
 
 ---
 
 ## Execution Log
 
+- `claude/vibrant-maxwell-2sx0ab` (Wave 7.4b, issue #29):
+  - End-to-end journey tests run the real app on the JVM (`AppJourneyTest`, `ProcessRecreationTest`); policy in `TEST_STRATEGY.md` §4.
+  - Defect found by the journeys and fixed: in the mock exam, two quick taps on a two-answer question kept only the second choice (the selection was computed from screen state that lags behind the database). The repository now applies each tap to the saved answer in one transaction.
+  - Gap against `PERFORMANCE.md` §3 fixed: the quiz selection and confidence are saved in `SavedStateHandle` and restored after process death.
 - `claude/vibrant-maxwell-2sx0ab` (Wave 7.4a, issue #30):
   - CI actions on Node 24: `actions/checkout@v5`, `actions/setup-java@v5`, `actions/upload-artifact@v6`, `gradle/actions/setup-gradle@v5`. `setup-gradle@v6` is not adopted: its caching component has separate Terms of Use (owner decision).
   - Dependency downloads: no configuration change was needed. Once main had a CI run the Gradle cache became readable from PRs; the seven PR runs since then (runs 11, 12, 14, 15, 17, 18, 20) had no dependency failure and run time fell from about 6 to about 3 minutes.

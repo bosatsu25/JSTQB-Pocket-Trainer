@@ -41,8 +41,15 @@ interface MockExamRepository {
 
     fun observeExam(sessionId: String): Flow<MockExam?>
 
-    /** Changes the answer; ignored after submission or after the deadline. Returns whether it was saved. */
+    /** Replaces the answer; ignored after submission or after the deadline. Returns whether it was saved. */
     suspend fun answer(sessionId: String, questionId: String, choiceIds: Set<String>): Boolean
+
+    /**
+     * Applies one tap on a choice to the saved answer: a single-answer question takes the tapped choice; a
+     * multi-answer question toggles it, up to the required number. The saved answer is read and written in one
+     * transaction, so quick taps cannot overwrite each other. Same conditions and result as [answer].
+     */
+    suspend fun selectChoice(sessionId: String, questionId: String, choiceId: String): Boolean
 
     suspend fun toggleFlag(sessionId: String, questionId: String)
 
@@ -99,16 +106,37 @@ class MockExamRepositoryImpl @Inject constructor(
             .map { (exam, answers) -> exam?.let { load(it, answers) } }
 
     override suspend fun answer(sessionId: String, questionId: String, choiceIds: Set<String>): Boolean =
-        db.withTransaction {
-            val exam = examDao.getExam(sessionId) ?: return@withTransaction false
-            val session = sessionDao.getSessionById(sessionId) ?: return@withTransaction false
-            val deadline = session.startedAt + exam.durationMinutes * MINUTE_MS
-            if (exam.submittedAt != null || timeProvider.currentTimeMillis() > deadline) return@withTransaction false
-            if (questionId !in session.questionIds) return@withTransaction false
-            val flagged = examDao.getAnswer(sessionId, questionId)?.flagged ?: false
-            examDao.upsertAnswer(ExamAnswerEntity(sessionId, questionId, choiceIds.sorted().joinToString(SEPARATOR), flagged))
-            true
+        updateAnswer(sessionId, questionId) { _, _ -> choiceIds }
+
+    override suspend fun selectChoice(sessionId: String, questionId: String, choiceId: String): Boolean =
+        updateAnswer(sessionId, questionId) { current, required ->
+            when {
+                required == 1 -> setOf(choiceId)
+                choiceId in current -> current - choiceId
+                current.size < required -> current + choiceId
+                else -> current
+            }
         }
+
+    /** Reads the saved answer, applies [change] (current selection, required count) and saves, in one transaction. */
+    private suspend fun updateAnswer(
+        sessionId: String,
+        questionId: String,
+        change: (current: Set<String>, required: Int) -> Set<String>
+    ): Boolean = db.withTransaction {
+        val exam = examDao.getExam(sessionId) ?: return@withTransaction false
+        val session = sessionDao.getSessionById(sessionId) ?: return@withTransaction false
+        val deadline = session.startedAt + exam.durationMinutes * MINUTE_MS
+        if (exam.submittedAt != null || timeProvider.currentTimeMillis() > deadline) return@withTransaction false
+        if (questionId !in session.questionIds) return@withTransaction false
+        val question = questionDao.getQuestionById(questionId) ?: return@withTransaction false
+        val saved = examDao.getAnswer(sessionId, questionId)
+        val choiceIds = change(saved?.selectedChoiceIds.toChoiceIds(), question.selectCount)
+        examDao.upsertAnswer(ExamAnswerEntity(sessionId, questionId, choiceIds.sorted().joinToString(SEPARATOR), saved?.flagged ?: false))
+        true
+    }
+
+    private fun String?.toChoiceIds(): Set<String> = orEmpty().split(SEPARATOR).filter { it.isNotEmpty() }.toSet()
 
     override suspend fun toggleFlag(sessionId: String, questionId: String) {
         db.withTransaction {
@@ -188,7 +216,7 @@ class MockExamRepositoryImpl @Inject constructor(
                 val answer = answerByQuestion[question.id]
                 MockExamQuestion(
                     question = question,
-                    selectedChoiceIds = answer?.selectedChoiceIds?.split(SEPARATOR)?.filter { it.isNotEmpty() }?.toSet().orEmpty(),
+                    selectedChoiceIds = answer?.selectedChoiceIds.toChoiceIds(),
                     flagged = answer?.flagged ?: false
                 )
             },

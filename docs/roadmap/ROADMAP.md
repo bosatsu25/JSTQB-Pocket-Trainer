@@ -84,9 +84,10 @@ Recommended order (epic #1): #27 → #28 → #32 → #4 → #30 → #29 → #23 
   - **Status**: COMPLETED
 - **Wave 7.4a: CI Stability (#30)**
   - **Goal**: No dependency-download failures on PR runs; no Node 20 deprecation warnings.
-  - **Status**: COMPLETED (actions moved to Node 24 versions; branch protection for `verify` is owner work)
+  - **Status**: COMPLETED (actions moved to Node 24 versions; owner still to confirm the warning is gone and to make `verify` a required check)
 - **Wave 7.4b: Navigation E2E Tests (#29)**
-  - **Status**: TODO
+  - **Goal**: Journeys through the real app (Hilt graph, Room, bundled content) on the JVM, including simulated process death.
+  - **Status**: COMPLETED (found and fixed: mock exam lost a choice on two quick taps; quiz input was not restored after process death)
 - **Wave 8.1: Accessibility & Adaptive Polish**
   - **Goal**: Audit TalkBack descriptions, touch target sizes, font scaling, and dynamic color styling.
   - **Status**: IN_PROGRESS (#23 — touch targets, 200% font, landscape/tablet and non-colour cues done; TalkBack, Accessibility Scanner and dynamic colour remain)

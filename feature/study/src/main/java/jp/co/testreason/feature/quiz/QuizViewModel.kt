@@ -43,7 +43,7 @@ sealed interface QuizUiEvent {
 class QuizViewModel @Inject constructor(
     private val quizRepository: QuizRepository,
     private val timeProvider: TimeProvider,
-    savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val sessionId: String = checkNotNull(savedStateHandle["sessionId"])
@@ -67,11 +67,15 @@ class QuizViewModel @Inject constructor(
                 val qId = session.questionIds[session.currentQuestionIndex]
                 val question = quizRepository.getQuestionById(qId)
                 questionStartTime = timeProvider.currentTimeMillis()
+                // Input made before process death is restored, but only for the question it was made on.
+                val isSameQuestion = savedStateHandle.get<String>(KEY_QUESTION) == qId
                 _uiState.value = QuizUiState(
                     session = session,
                     currentQuestion = question,
-                    selectedChoiceIds = emptySet(),
-                    confidence = null
+                    selectedChoiceIds = savedStateHandle.get<ArrayList<String>>(KEY_SELECTED).orEmpty().toSet().takeIf { isSameQuestion }.orEmpty(),
+                    confidence = savedStateHandle.get<String>(KEY_CONFIDENCE)
+                        ?.let { name -> ConfidenceLevel.entries.firstOrNull { it.name == name } }
+                        .takeIf { isSameQuestion }
                 )
             }
         }
@@ -94,10 +98,19 @@ class QuizViewModel @Inject constructor(
             }
             state.copy(selectedChoiceIds = updated)
         }
+        saveInput()
     }
 
     fun selectConfidence(confidence: ConfidenceLevel) {
         _uiState.update { it.copy(confidence = confidence) }
+        saveInput()
+    }
+
+    private fun saveInput() {
+        val state = _uiState.value
+        savedStateHandle[KEY_QUESTION] = state.currentQuestion?.id
+        savedStateHandle[KEY_SELECTED] = ArrayList(state.selectedChoiceIds)
+        savedStateHandle[KEY_CONFIDENCE] = state.confidence?.name
     }
 
     fun submitAnswer() {
@@ -137,5 +150,11 @@ class QuizViewModel @Inject constructor(
             // Not reset to "can submit": a tap after this point would record and navigate a second time.
             _uiState.update { it.copy(isSubmitting = false, isSubmitted = true) }
         }
+    }
+
+    private companion object {
+        const val KEY_QUESTION = "quiz_question"
+        const val KEY_SELECTED = "quiz_selected"
+        const val KEY_CONFIDENCE = "quiz_confidence"
     }
 }
