@@ -11,7 +11,8 @@ interface SessionDao {
     @Query("SELECT * FROM quiz_sessions WHERE id = :id")
     suspend fun getSessionById(id: String): SessionEntity?
 
-    @Query("SELECT * FROM quiz_sessions WHERE isFinalized = 0 ORDER BY startedAt DESC LIMIT 1")
+    /** Latest unfinished study session; mock exams are resumed from their own screen. */
+    @Query("SELECT * FROM quiz_sessions WHERE isFinalized = 0 AND mode != 'MOCK_EXAM' ORDER BY startedAt DESC LIMIT 1")
     fun getActiveSession(): Flow<SessionEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

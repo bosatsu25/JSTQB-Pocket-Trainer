@@ -22,7 +22,7 @@ object DatabaseModule {
             context,
             TestReasonDatabase::class.java,
             "testreason.db"
-        ).addMigrations(MIGRATION_1_2).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
     }
 
     @Provides

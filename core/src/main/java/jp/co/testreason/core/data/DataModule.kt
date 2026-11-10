@@ -28,6 +28,12 @@ abstract class DataModule {
 
     @Binds
     @Singleton
+    abstract fun bindMockExamRepository(
+        impl: MockExamRepositoryImpl
+    ): MockExamRepository
+
+    @Binds
+    @Singleton
     abstract fun bindMasteryRepository(
         impl: MasteryRepositoryImpl
     ): MasteryRepository

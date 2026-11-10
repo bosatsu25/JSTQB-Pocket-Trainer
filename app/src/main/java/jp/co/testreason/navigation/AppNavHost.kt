@@ -16,6 +16,12 @@ import jp.co.testreason.feature.explanation.ExplanationScreen
 import jp.co.testreason.feature.explanation.ExplanationViewModel
 import jp.co.testreason.feature.home.HomeScreen
 import jp.co.testreason.feature.home.HomeViewModel
+import jp.co.testreason.feature.mockexam.MockExamIntroScreen
+import jp.co.testreason.feature.mockexam.MockExamIntroViewModel
+import jp.co.testreason.feature.mockexam.MockExamResultScreen
+import jp.co.testreason.feature.mockexam.MockExamResultViewModel
+import jp.co.testreason.feature.mockexam.MockExamScreen
+import jp.co.testreason.feature.mockexam.MockExamViewModel
 import jp.co.testreason.feature.quiz.QuizScreen
 import jp.co.testreason.feature.quiz.QuizViewModel
 import jp.co.testreason.feature.result.ResultScreen
@@ -49,6 +55,15 @@ sealed interface Screen {
 
     @Serializable
     object ChapterSelectRoute : Screen
+
+    @Serializable
+    object MockExamIntroRoute : Screen
+
+    @Serializable
+    data class MockExamRoute(val sessionId: String) : Screen
+
+    @Serializable
+    data class MockExamResultRoute(val sessionId: String) : Screen
 }
 
 @Composable
@@ -70,6 +85,7 @@ fun TestReasonNavHost(
                 },
                 onOpenReview = { navController.navigate(Screen.ReviewRoute) },
                 onOpenChapters = { navController.navigate(Screen.ChapterSelectRoute) },
+                onOpenMockExam = { navController.navigate(Screen.MockExamIntroRoute) },
                 onOpenAnalytics = { navController.navigate(Screen.AnalyticsRoute) }
             )
         }
@@ -91,6 +107,39 @@ fun TestReasonNavHost(
             ChapterSelectScreen(
                 viewModel = viewModel,
                 onStartQuiz = { sessionId -> navController.navigate(Screen.QuizRoute(sessionId)) }
+            )
+        }
+
+        composable<Screen.MockExamIntroRoute> {
+            val viewModel: MockExamIntroViewModel = hiltViewModel()
+            MockExamIntroScreen(
+                viewModel = viewModel,
+                onOpenExam = { sessionId -> navController.navigate(Screen.MockExamRoute(sessionId)) }
+            )
+        }
+
+        composable<Screen.MockExamRoute> {
+            val viewModel: MockExamViewModel = hiltViewModel()
+            MockExamScreen(
+                viewModel = viewModel,
+                onShowResult = { sessionId ->
+                    navController.navigate(Screen.MockExamResultRoute(sessionId)) {
+                        popUpTo<Screen.MockExamIntroRoute> { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<Screen.MockExamResultRoute> {
+            val viewModel: MockExamResultViewModel = hiltViewModel()
+            MockExamResultScreen(
+                viewModel = viewModel,
+                onStartQuiz = { sessionId -> navController.navigate(Screen.QuizRoute(sessionId)) },
+                onNavigateHome = {
+                    navController.navigate(Screen.HomeRoute) {
+                        popUpTo<Screen.HomeRoute> { inclusive = true }
+                    }
+                }
             )
         }
 

@@ -47,7 +47,7 @@ class MigrationTest {
             ApplicationProvider.getApplicationContext(),
             TestReasonDatabase::class.java,
             dbName
-        ).addMigrations(MIGRATION_1_2).allowMainThreadQueries().build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).allowMainThreadQueries().build()
         try {
             val question = db.questionDao().getQuestionById("q1")!!
             assertEquals(1, question.selectCount)
@@ -59,4 +59,32 @@ class MigrationTest {
             db.close()
         }
     }
+
+    @Test
+    fun migrate2To3_addsMockExamTablesAndKeepsData() = runTest {
+        helper.createDatabase(dbName, 2).apply {
+            execSQL(
+                "INSERT INTO questions (id, learningObjectiveId, stem, choices, explanation, selectCount, scenario, revision, isActive) " +
+                    "VALUES ('q1', 'FL-1.1.1', 'stem', '[]', 'exp', 1, NULL, 3, 1)"
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(dbName, 3, true, MIGRATION_2_3).apply {
+            execSQL("INSERT INTO mock_exams (sessionId, durationMinutes, submittedAt) VALUES ('s1', 60, NULL)")
+            execSQL("INSERT INTO exam_answers (sessionId, questionId, selectedChoiceIds, flagged) VALUES ('s1', 'q1', 'A', 1)")
+            close()
+        }
+
+        val db = Room.databaseBuilder(ApplicationProvider.getApplicationContext(), TestReasonDatabase::class.java, dbName)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3).allowMainThreadQueries().build()
+        try {
+            assertEquals(3, db.questionDao().getQuestionById("q1")!!.revision)
+            assertEquals(60, db.mockExamDao().getExam("s1")!!.durationMinutes)
+            assertTrue(db.mockExamDao().getAnswer("s1", "q1")!!.flagged)
+        } finally {
+            db.close()
+        }
+    }
 }
+

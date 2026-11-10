@@ -48,7 +48,7 @@ class StudyScreensResponsiveTest(private val device: TestDevice) {
         }
         compose.assertNoHorizontalOverflow()
         compose.assertTouchTargetsAtLeast48dp(host)
-        listOf("続きから再開", "今日のおすすめを開始", "今日の復習", "弱点克服", "章別学習", "学習分析").forEach {
+        listOf("続きから再開", "今日のおすすめを開始", "今日の復習", "弱点克服", "章別学習", "模擬試験", "学習分析").forEach {
             compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()
         }
     }

@@ -7,6 +7,8 @@ import jp.co.testreason.core.content.BundledQuestion
 import jp.co.testreason.core.content.BundledQuestionSource
 import jp.co.testreason.core.data.MasteryRepository
 import jp.co.testreason.core.data.MasteryRepositoryImpl
+import jp.co.testreason.core.data.MockExamRepository
+import jp.co.testreason.core.data.MockExamRepositoryImpl
 import jp.co.testreason.core.data.QuizRepository
 import jp.co.testreason.core.data.QuizRepositoryImpl
 import jp.co.testreason.core.database.AttemptEntity
@@ -17,6 +19,7 @@ import jp.co.testreason.core.model.Choice
 import jp.co.testreason.core.model.ConfidenceLevel
 import jp.co.testreason.core.model.Question
 import jp.co.testreason.core.model.StudyMode
+import jp.co.testreason.core.model.Syllabus
 import jp.co.testreason.core.model.TimeProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,6 +60,10 @@ class TestEnvironment(questions: List<Question> = SampleData.questions) {
         bundledQuestionSource = BundledQuestionSource { questions.map { BundledQuestion(it, active = true) } }
     )
 
+    val mockExamRepository: MockExamRepository = MockExamRepositoryImpl(
+        db, quizRepository, masteryRepository, SpacedReviewEngine(clock), clock
+    )
+
     suspend fun start() = quizRepository.syncBundledQuestions()
 
     /** Inserts a session with a fixed question order (repository sessions shuffle). */
@@ -85,4 +92,9 @@ object SampleData {
     val multi = Question("c4-001", "FL-4.2.2", "境界値を2つ選べ", choices("B", "D", count = 5), "解説", selectCount = 2, scenario = "| a | b |", revision = 1)
 
     val questions = listOf(single1, single2, multi)
+
+    /** Two questions for every LO (correct answer "A"): enough to compose a mock exam. */
+    fun examBank(): List<Question> = Syllabus.learningObjectives.flatMap { lo ->
+        (1..2).map { n -> Question("${lo.id}-$n", lo.id, "${lo.id} 問題$n", choices("A"), "解説", revision = 1) }
+    }
 }
