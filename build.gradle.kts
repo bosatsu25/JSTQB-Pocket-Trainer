@@ -26,4 +26,14 @@ subprojects {
     tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
         jvmTarget = "17"
     }
+
+    // Print the full failure (message, cause, stack) in the console so CI logs are diagnosable without artifacts.
+    tasks.withType<Test>().configureEach {
+        testLogging {
+            events(org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED)
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+            showCauses = true
+            showStackTraces = true
+        }
+    }
 }

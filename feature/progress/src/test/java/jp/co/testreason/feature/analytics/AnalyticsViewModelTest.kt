@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import jp.co.testreason.core.model.KLevel
 import jp.co.testreason.core.model.StudyMode
 import jp.co.testreason.feature.testing.MainDispatcherRule
+import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
 import jp.co.testreason.feature.testing.TestEnvironment
 import kotlinx.coroutines.flow.first
@@ -44,7 +45,7 @@ class AnalyticsViewModelTest {
         assertEquals(ObjectiveState.WEAK, lo.state)
         assertEquals(1, lo.questionCount)
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startObjective("FL-4.2.2")
             val event = awaitItem() as AnalyticsEvent.NavigateToQuiz
             val session = env.quizRepository.getSessionById(event.sessionId)!!

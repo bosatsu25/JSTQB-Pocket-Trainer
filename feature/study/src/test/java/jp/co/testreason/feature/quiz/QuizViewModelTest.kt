@@ -3,6 +3,7 @@ package jp.co.testreason.feature.quiz
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import jp.co.testreason.feature.testing.MainDispatcherRule
+import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
 import jp.co.testreason.feature.testing.TestEnvironment
 import kotlinx.coroutines.flow.first
@@ -52,7 +53,7 @@ class QuizViewModelTest {
         assertTrue(vm.uiState.value.canSubmit)
 
         env.clock.now += 42_000L
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.submitAnswer()
             val event = awaitItem() as QuizUiEvent.NavigateToExplanation
             assertEquals(SampleData.single1.id, event.questionId)
@@ -75,7 +76,7 @@ class QuizViewModelTest {
         vm.selectChoice("D")
         assertEquals(setOf("B", "D"), vm.uiState.value.selectedChoiceIds)
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.submitAnswer()
             awaitItem()
         }
@@ -89,7 +90,7 @@ class QuizViewModelTest {
         val vm = viewModelFor(SampleData.single1.id)
         vm.selectChoice("A")
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.submitAnswer()
             vm.submitAnswer()
             awaitItem()

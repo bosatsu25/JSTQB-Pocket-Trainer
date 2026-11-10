@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import jp.co.testreason.core.model.StudyMode
 import jp.co.testreason.feature.testing.MainDispatcherRule
+import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
 import jp.co.testreason.feature.testing.TestEnvironment
 import kotlinx.coroutines.flow.first
@@ -50,7 +51,7 @@ class ResultViewModelTest {
         assertEquals(RecommendedAction.WEAKNESS, vm.uiState.value.recommendedAction)
         assertEquals(listOf("FL-1.3.1"), vm.uiState.value.summary.reviewObjectives.map { it.id })
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startRecommendedSession()
             val event = awaitItem() as ResultUiEvent.NavigateToQuiz
             assertEquals(StudyMode.WEAKNESS, env.quizRepository.getSessionById(event.sessionId)!!.mode)
@@ -64,7 +65,7 @@ class ResultViewModelTest {
         val vm = viewModel()
 
         assertEquals(RecommendedAction.DAILY, vm.uiState.value.recommendedAction)
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startRecommendedSession()
             val event = awaitItem() as ResultUiEvent.NavigateToQuiz
             assertEquals(StudyMode.DAILY, env.quizRepository.getSessionById(event.sessionId)!!.mode)

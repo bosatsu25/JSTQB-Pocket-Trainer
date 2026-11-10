@@ -6,6 +6,7 @@ import jp.co.testreason.core.model.Attempt
 import jp.co.testreason.core.model.ConfidenceLevel
 import jp.co.testreason.core.model.MistakeReason
 import jp.co.testreason.feature.testing.MainDispatcherRule
+import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
 import jp.co.testreason.feature.testing.TestEnvironment
 import kotlinx.coroutines.flow.first
@@ -65,14 +66,14 @@ class ExplanationViewModelTest {
     @Test
     fun proceed_goesToNextQuestionThenToResult() = runTest {
         val first = answerAndOpen(SampleData.single1.id, correct = true)
-        first.events.test {
+        first.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             first.proceedToNext()
             assertEquals(ExplanationUiEvent.NavigateToNextQuestion("s1"), awaitItem())
         }
 
         val last = answerAndOpen(SampleData.single2.id, correct = true)
         assertTrue(last.uiState.value.isLastQuestion)
-        last.events.test {
+        last.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             last.proceedToNext()
             assertEquals(ExplanationUiEvent.NavigateToResult("s1"), awaitItem())
         }

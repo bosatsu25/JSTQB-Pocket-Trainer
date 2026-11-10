@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import jp.co.testreason.core.database.ReviewScheduleEntity
 import jp.co.testreason.core.model.StudyMode
 import jp.co.testreason.feature.testing.MainDispatcherRule
+import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
 import jp.co.testreason.feature.testing.TestEnvironment
 import kotlinx.coroutines.flow.first
@@ -42,7 +43,7 @@ class ReviewViewModelTest {
         val state = vm.uiState.first { !it.isLoading }
         assertEquals(listOf(SampleData.single2.id), state.dueQuestions.map { it.id })
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startDueReviewSession()
             val event = awaitItem() as ReviewUiEvent.NavigateToQuiz
             assertEquals(StudyMode.REVIEW, env.quizRepository.getSessionById(event.sessionId)!!.mode)
@@ -54,7 +55,7 @@ class ReviewViewModelTest {
         val vm = ReviewViewModel(env.quizRepository)
         assertEquals(0, vm.uiState.first { !it.isLoading }.dueQuestions.size)
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startDueReviewSession()
             expectNoEvents()
         }

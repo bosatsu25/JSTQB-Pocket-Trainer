@@ -2,6 +2,7 @@ package jp.co.testreason.feature.home
 
 import app.cash.turbine.test
 import jp.co.testreason.feature.testing.MainDispatcherRule
+import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
 import jp.co.testreason.feature.testing.TestEnvironment
 import kotlinx.coroutines.flow.first
@@ -37,7 +38,7 @@ class HomeViewModelTest {
     @Test
     fun weaknessReview_withNoWeakQuestions_showsAMessageInsteadOfAnEmptySession() = runTest {
         val vm = viewModel()
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startWeaknessReview()
             assertTrue(awaitItem() is HomeUiEvent.ShowMessage)
         }
@@ -50,7 +51,7 @@ class HomeViewModelTest {
         val vm = viewModel()
         vm.uiState.first { it.weakQuestionCount == 1 }
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startWeaknessReview()
             val event = awaitItem() as HomeUiEvent.NavigateToQuiz
             assertEquals(listOf(SampleData.single2.id), env.quizRepository.getSessionById(event.sessionId)!!.questionIds)
@@ -61,13 +62,13 @@ class HomeViewModelTest {
     fun dailyQuiz_navigates_andUnfinishedSessionCanBeResumed() = runTest {
         val vm = viewModel()
         lateinit var sessionId: String
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startDailyQuiz()
             sessionId = (awaitItem() as HomeUiEvent.NavigateToQuiz).sessionId
         }
 
         vm.uiState.first { it.resumableSession?.id == sessionId }
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.resumeSession()
             assertEquals(HomeUiEvent.NavigateToQuiz(sessionId), awaitItem())
         }

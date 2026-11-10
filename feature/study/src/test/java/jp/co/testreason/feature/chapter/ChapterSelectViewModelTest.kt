@@ -3,6 +3,7 @@ package jp.co.testreason.feature.chapter
 import app.cash.turbine.test
 import jp.co.testreason.core.model.StudyMode
 import jp.co.testreason.feature.testing.MainDispatcherRule
+import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
 import jp.co.testreason.feature.testing.TestEnvironment
 import kotlinx.coroutines.flow.first
@@ -41,7 +42,7 @@ class ChapterSelectViewModelTest {
         assertEquals(1, chapters[0].unseenCount)
         assertEquals(1, chapters.single { it.chapter == 4 }.questionCount)
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startChapter(1, count = null)
             val event = awaitItem() as ChapterSelectEvent.NavigateToQuiz
             val session = env.quizRepository.getSessionById(event.sessionId)!!

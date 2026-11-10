@@ -29,6 +29,14 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+
+/**
+ * Turbine waits on wall-clock time, while these tests wait on real Room I/O on other threads. Turbine's
+ * default of 3 s is too tight on a loaded CI runner (module test JVMs and lint run in parallel).
+ */
+val REPOSITORY_IO_TIMEOUT: Duration = 10.seconds
 
 /**
  * Runs viewModelScope on a test dispatcher with its own scheduler, so periodic clock ticks in the

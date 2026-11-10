@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import jp.co.testreason.core.model.MockExamStart
 import jp.co.testreason.feature.testing.MainDispatcherRule
+import jp.co.testreason.feature.testing.REPOSITORY_IO_TIMEOUT
 import jp.co.testreason.feature.testing.SampleData
 import jp.co.testreason.feature.testing.TestEnvironment
 import kotlinx.coroutines.flow.first
@@ -56,7 +57,7 @@ class MockExamViewModelTest {
         val vm = MockExamIntroViewModel(env.mockExamRepository)
         vm.setExtendedTime(true)
         lateinit var id: String
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.start()
             id = (awaitItem() as MockExamIntroEvent.NavigateToExam).sessionId
         }
@@ -91,7 +92,7 @@ class MockExamViewModelTest {
         vm.select("A")
         vm.uiState.first { it.unansweredCount == 39 }
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             env.clock.now += 60 * 60_000L
             vm.onTick()
             assertEquals(MockExamEvent.NavigateToResult(id), awaitItem())
@@ -108,7 +109,7 @@ class MockExamViewModelTest {
         env.clock.now += 61 * 60_000L // e.g. the app was killed during the exam
 
         val vm = MockExamViewModel(env.mockExamRepository, env.clock, SavedStateHandle(mapOf("sessionId" to id)))
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             assertEquals(MockExamEvent.NavigateToResult(id), awaitItem())
         }
         assertTrue(env.mockExamRepository.observeExam(id).first()!!.isSubmitted)
@@ -127,7 +128,7 @@ class MockExamViewModelTest {
         assertEquals(26, result.correct)
         assertTrue(result.passed)
 
-        vm.events.test {
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startWeaknessReview()
             val event = awaitItem() as MockExamResultEvent.NavigateToQuiz
             assertEquals(listOf(questions[26].question.id), env.quizRepository.getSessionById(event.sessionId)!!.questionIds)
