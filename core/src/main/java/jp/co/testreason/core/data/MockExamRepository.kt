@@ -209,7 +209,7 @@ class MockExamRepositoryImpl @Inject constructor(
     private suspend fun load(entity: MockExamEntity, answers: List<ExamAnswerEntity>): MockExam? {
         val session = sessionDao.getSessionById(entity.sessionId) ?: return null
         val answerByQuestion = answers.associateBy { it.questionId }
-        val questions = session.questionIds.mapNotNull { id -> questionDao.getQuestionById(id)?.toDomain() }
+        val questions = questionDao.getQuestionsInOrder(session.questionIds).map { it.toDomain() }
         return MockExam(
             sessionId = entity.sessionId,
             questions = questions.map { question: Question ->
