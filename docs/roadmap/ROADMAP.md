@@ -71,12 +71,26 @@ Tracking epic: GitHub issue #1 (dependency-ordered checklist of #2–#25).
 ---
 
 ## Milestone M4 — UX Polish, Performance & Release Readiness
+Recommended order (epic #1): #27 → #28 → #30 → #29 → #23 → #21 → #24 → #4 → #25.
+
+- **Wave 7.2: Content Human Review (#27)**
+  - **Goal**: Human review of the 52 K3 questions and a K1/K2 spot-check; required before release.
+  - **Status**: TODO
+- **Wave 7.3: Double-tap Guards for Session Start (#28)**
+  - **Goal**: Home / result / chapter / analytics / mock-exam start buttons cannot create duplicate sessions.
+  - **Status**: TODO
+- **Wave 7.4: CI Stability (#30) & Navigation E2E Tests (#29)**
+  - **Status**: TODO
 - **Wave 8.1: Accessibility & Adaptive Polish**
   - **Goal**: Audit TalkBack descriptions, touch target sizes, font scaling, and dynamic color styling.
-  - **Status**: TODO (#23)
+  - **Status**: IN_PROGRESS (#23 — touch targets, 200% font, landscape/tablet and non-colour cues done; TalkBack, Accessibility Scanner and dynamic colour remain)
+- **Wave 8.2: Settings (#21)**
+  - **Status**: TODO
+- **Wave 8.3: Chapter Keywords (#4)**
+  - **Status**: TODO (LO master itself done)
 - **Wave 9.1: Performance & Macrobenchmarks**
   - **Goal**: Generate Baseline Profile and measure startup/scroll benchmarks.
-  - **Status**: TODO (#24)
+  - **Status**: TODO (#24 — clock moved off the main thread; N+1 queries and measurements remain)
 - **Wave 10.1: Release Hardening & APK Verification**
   - **Goal**: Perform legal, content verification, privacy audits, and prepare release build.
-  - **Status**: TODO (#25)
+  - **Status**: TODO (#25; depends on #27)
