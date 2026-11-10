@@ -61,6 +61,9 @@
 
 ## Execution Log
 
+- `claude/vibrant-maxwell-2sx0ab` (Wave 7.4a, issue #30):
+  - CI actions on Node 24: `actions/checkout@v5`, `actions/setup-java@v5`, `actions/upload-artifact@v6`, `gradle/actions/setup-gradle@v5`. `setup-gradle@v6` is not adopted: its caching component has separate Terms of Use (owner decision).
+  - Dependency downloads: no configuration change was needed. Once main had a CI run the Gradle cache became readable from PRs; the seven PR runs since then (runs 11, 12, 14, 15, 17, 18, 20) had no dependency failure and run time fell from about 6 to about 3 minutes.
 - `claude/vibrant-maxwell-2sx0ab` (Wave 8.3, issue #4):
   - Glossary: 94 syllabus keywords with one-line summaries in our own words (authored, then independently reviewed against the syllabus: 50 summaries rewritten, keyword lists matched per chapter).
   - Glossary list with chapter filter, flash cards with the drill's lap rule, keyword coverage report (3 keywords are in no question text).

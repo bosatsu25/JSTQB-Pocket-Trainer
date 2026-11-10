@@ -82,7 +82,10 @@ Recommended order (epic #1): #27 → #28 → #32 → #4 → #30 → #29 → #23 
 - **Wave 7.5: Rapid Drill Mode (#32)**
   - **Goal**: 周回モード — answer shown on the tap, missed questions repeat until the lap is cleared; not recorded in mastery / review.
   - **Status**: COMPLETED
-- **Wave 7.4: CI Stability (#30) & Navigation E2E Tests (#29)**
+- **Wave 7.4a: CI Stability (#30)**
+  - **Goal**: No dependency-download failures on PR runs; no Node 20 deprecation warnings.
+  - **Status**: COMPLETED (actions moved to Node 24 versions; branch protection for `verify` is owner work)
+- **Wave 7.4b: Navigation E2E Tests (#29)**
   - **Status**: TODO
 - **Wave 8.1: Accessibility & Adaptive Polish**
   - **Goal**: Audit TalkBack descriptions, touch target sizes, font scaling, and dynamic color styling.
