@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -98,22 +99,17 @@ class DrillViewModel @Inject constructor(
     private var questions: Map<String, Question> = emptyMap()
     private var startedAt: Long = timeProvider.currentTimeMillis()
 
-    /** When "次へ" last brought up a question; taps right after it are treated as a double tap on "次へ". */
-    private var advancedAt: Long? = null
+    /**
+     * In this mode a tap on a choice is the answer, and the next question's choices can appear where "次へ"
+     * was. Without the guard, the second tap of a double tap on "次へ" would answer the next question.
+     */
+    private val tapGuard = AccidentalTapGuard(timeProvider)
 
     init {
         viewModelScope.launch {
             val saved = restoreLap()
             if (saved != null) {
-                questions = saved.questionIds.mapNotNull { quizRepository.getQuestionById(it) }.associateBy { it.id }
-                // A question retired by a content update while the app was in the background is dropped.
-                show(
-                    saved.copy(
-                        questionIds = saved.questionIds.filter { it in questions },
-                        queue = saved.queue.filter { it in questions },
-                        missed = saved.missed.filter { it in questions }.toSet()
-                    )
-                )
+                restore(saved)
             } else {
                 val picked = quizRepository.getDrillQuestions(chapter, count)
                 questions = picked.associateBy { it.id }
@@ -127,7 +123,7 @@ class DrillViewModel @Inject constructor(
     fun select(choiceId: String) {
         val state = _uiState.value
         val question = state.question ?: return
-        if (state.reveal != null || isAccidentalTap()) return
+        if (state.reveal != null || tapGuard.blocks()) return
         val selected = when {
             question.selectCount == 1 -> setOf(choiceId)
             choiceId in state.selectedChoiceIds -> state.selectedChoiceIds - choiceId
@@ -138,13 +134,14 @@ class DrillViewModel @Inject constructor(
         } else {
             null
         }
-        _uiState.update { it.copy(selectedChoiceIds = selected, reveal = reveal) }
+        publish(state.copy(selectedChoiceIds = selected, reveal = reveal))
     }
 
     /** "I don't know": look at the answer right away; the question comes back later in the lap. */
     fun showAnswer() {
-        if (_uiState.value.question == null || isAccidentalTap()) return
-        _uiState.update { if (it.reveal == null) it.copy(reveal = DrillReveal.SHOWN) else it }
+        val state = _uiState.value
+        if (state.question == null || state.reveal != null || tapGuard.blocks()) return
+        publish(state.copy(reveal = DrillReveal.SHOWN))
     }
 
     fun toggleReasons() = _uiState.update { it.copy(showReasons = !it.showReasons) }
@@ -152,17 +149,8 @@ class DrillViewModel @Inject constructor(
     fun next() {
         val state = _uiState.value
         val reveal = state.reveal ?: return
-        advancedAt = timeProvider.currentTimeMillis()
+        tapGuard.arm()
         show(state.lap.answered(correct = reveal == DrillReveal.CORRECT))
-    }
-
-    /**
-     * In this mode a tap on a choice is the answer, and the next question's choices can appear where "次へ"
-     * was. Without this, the second tap of a double tap on "次へ" would answer the next question.
-     */
-    private fun isAccidentalTap(): Boolean {
-        val sinceAdvance = timeProvider.currentTimeMillis() - (advancedAt ?: return false)
-        return sinceAdvance in 0 until ACCIDENTAL_TAP_GUARD_MS
     }
 
     /** Another lap over the same questions, or only over the ones missed in the lap just finished. */
@@ -173,22 +161,30 @@ class DrillViewModel @Inject constructor(
         show(DrillLap.start(ids.shuffled()))
     }
 
-    private fun show(lap: DrillLap) {
-        save(lap)
-        _uiState.value = DrillUiState(
+    private fun show(lap: DrillLap) = publish(
+        DrillUiState(
             isLoading = false,
             lap = lap,
             question = lap.current?.let { questions[it] },
             elapsedMs = if (lap.isFinished) timeProvider.currentTimeMillis() - startedAt else 0L
         )
-    }
+    )
 
-    private fun save(lap: DrillLap) {
-        savedStateHandle[KEY_IDS] = ArrayList(lap.questionIds)
-        savedStateHandle[KEY_QUEUE] = ArrayList(lap.queue)
-        savedStateHandle[KEY_MISSED] = ArrayList(lap.missed)
-        savedStateHandle[KEY_ANSWERS] = lap.answerCount
+    /**
+     * Shows [state] and saves what must survive process death: the lap, an answer that is already shown
+     * (otherwise a miss would be forgotten and the question could be retried as a first try), and the
+     * time of a finished lap (otherwise time spent away after finishing would be added to it).
+     */
+    private fun publish(state: DrillUiState) {
+        _uiState.value = state
+        savedStateHandle[KEY_IDS] = ArrayList(state.lap.questionIds)
+        savedStateHandle[KEY_QUEUE] = ArrayList(state.lap.queue)
+        savedStateHandle[KEY_MISSED] = ArrayList(state.lap.missed)
+        savedStateHandle[KEY_ANSWERS] = state.lap.answerCount
         savedStateHandle[KEY_STARTED_AT] = startedAt
+        savedStateHandle[KEY_SELECTED] = ArrayList(state.selectedChoiceIds)
+        savedStateHandle[KEY_REVEAL] = state.reveal?.name
+        savedStateHandle[KEY_ELAPSED] = state.elapsedMs.takeIf { state.lap.isFinished }
     }
 
     private fun restoreLap(): DrillLap? {
@@ -202,12 +198,41 @@ class DrillViewModel @Inject constructor(
         )
     }
 
+    private suspend fun restore(saved: DrillLap) {
+        // Active questions only: one retired by a content update since the lap was saved is dropped.
+        // (getQuestionById also returns retired questions, so it cannot be used here.)
+        quizRepository.syncBundledQuestions()
+        questions = quizRepository.getAllQuestions().first().filter { it.id in saved.questionIds }.associateBy { it.id }
+        val lap = saved.copy(
+            questionIds = saved.questionIds.filter { it in questions },
+            queue = saved.queue.filter { it in questions },
+            missed = saved.missed.filter { it in questions }.toSet()
+        )
+        val isSameQuestion = lap.current == saved.current
+        val reveal = savedStateHandle.get<String>(KEY_REVEAL)?.let { name -> DrillReveal.entries.firstOrNull { it.name == name } }
+        publish(
+            DrillUiState(
+                isLoading = false,
+                lap = lap,
+                question = lap.current?.let { questions[it] },
+                selectedChoiceIds = savedStateHandle.get<ArrayList<String>>(KEY_SELECTED).orEmpty().toSet().takeIf { isSameQuestion }.orEmpty(),
+                reveal = reveal.takeIf { isSameQuestion },
+                elapsedMs = when {
+                    !lap.isFinished -> 0L
+                    else -> savedStateHandle.get<Long>(KEY_ELAPSED) ?: (timeProvider.currentTimeMillis() - startedAt)
+                }
+            )
+        )
+    }
+
     private companion object {
         const val KEY_IDS = "drill_ids"
         const val KEY_QUEUE = "drill_queue"
         const val KEY_MISSED = "drill_missed"
         const val KEY_ANSWERS = "drill_answers"
         const val KEY_STARTED_AT = "drill_started_at"
-        const val ACCIDENTAL_TAP_GUARD_MS = 400L
+        const val KEY_SELECTED = "drill_selected"
+        const val KEY_REVEAL = "drill_reveal"
+        const val KEY_ELAPSED = "drill_elapsed"
     }
 }

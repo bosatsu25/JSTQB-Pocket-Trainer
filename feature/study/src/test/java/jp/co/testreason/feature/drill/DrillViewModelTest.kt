@@ -246,6 +246,55 @@ class DrillViewModelTest {
     }
 
     @Test
+    fun answerShownBeforeProcessDeath_isStillShown_andStillCountsAsAMiss() = runTest {
+        val handle = SavedStateHandle(mapOf("chapter" to 1, "count" to 0))
+        val before = drill(handle = handle)
+        before.answer(correct = false) // answer shown, "次へ" not tapped yet
+
+        val after = drill(handle = handle)
+
+        assertEquals(before.question.id, after.question.id)
+        assertEquals(DrillReveal.WRONG, after.state.reveal)
+        assertEquals(before.state.selectedChoiceIds, after.state.selectedChoiceIds)
+        after.answer(correct = true) // the shown answer cannot be replaced by a correct "first try"
+        assertEquals(DrillReveal.WRONG, after.state.reveal)
+        after.goNext()
+        assertEquals(setOf(before.question.id), after.state.lap.missed)
+    }
+
+    @Test
+    fun finishedLap_keepsItsTimeAfterProcessDeath() = runTest {
+        val handle = SavedStateHandle(mapOf("chapter" to 4, "count" to 0))
+        val before = drill(handle = handle)
+        env.clock.now += 8_000
+        before.answer(correct = true)
+        before.next()
+        assertTrue(before.state.isFinished)
+
+        env.clock.now += 3_600_000 // the app stays in the background for an hour
+        val after = drill(handle = handle)
+
+        assertTrue(after.state.isFinished)
+        assertEquals(8_000L, after.state.elapsedMs)
+    }
+
+    @Test
+    fun questionRetiredWhileTheLapWasSaved_isDroppedOnRestore() = runTest {
+        val handle = SavedStateHandle(mapOf("chapter" to 1, "count" to 0))
+        val before = drill(handle = handle)
+        val retired = before.question.id
+        before.answer(correct = false)
+        env.db.questionDao().deactivateQuestions(listOf(retired))
+
+        val after = drill(handle = handle)
+
+        assertEquals(1, after.state.lap.total)
+        assertNotEquals(retired, after.question.id)
+        assertNull(after.state.reveal) // the shown answer belonged to the retired question
+        assertTrue(after.state.lap.missed.isEmpty())
+    }
+
+    @Test
     fun setup_listsQuestionCountsPerChapter() = runTest {
         val vm = DrillSetupViewModel(env.quizRepository)
         val state = vm.uiState.first { it.totalCount == 3 }

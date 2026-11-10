@@ -94,8 +94,10 @@ explanation screen.
   no session. Reason: in a drill the learner often answers from memory of the previous lap. Recording those
   answers would raise mastery and stretch review intervals without evidence of understanding, and misses made
   while skimming would flood the weakness queue. Understanding is measured by the normal loop and the mock exam.
-- The lap in progress is kept in `SavedStateHandle` (question ids, queue, missed, answer count, start time), so it
-  survives process death but is not resumable after leaving the screen.
+- The lap is kept in `SavedStateHandle`, so it survives process death but is not resumable after leaving the
+  screen. Saved: question ids, queue, missed, answer count, start time, the answer currently shown (a miss must
+  not be forgotten and retried as a first try) and the time of a finished lap (time away after finishing is not
+  added). A question retired by a content update is dropped from a restored lap.
 
 ## Learning Objective States (Analytics)
 | State | Rule |
