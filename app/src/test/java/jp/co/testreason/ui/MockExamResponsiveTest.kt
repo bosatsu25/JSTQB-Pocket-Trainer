@@ -1,6 +1,10 @@
 package jp.co.testreason.ui
 
 import android.app.Application
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -49,7 +53,7 @@ class MockExamResponsiveTest(private val device: TestDevice) {
             MockExamIntroContent(MockExamIntroUiState(), onExtendedTimeChange = {}, onStart = {}, onResume = {})
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("時間延長（75分）").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("模擬試験を開始").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("途中の模擬試験を再開").assertDoesNotExist()
@@ -61,7 +65,7 @@ class MockExamResponsiveTest(private val device: TestDevice) {
             MockExamIntroContent(MockExamIntroUiState(resumableExamId = "s0"), onExtendedTimeChange = {}, onStart = {}, onResume = {})
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("途中の模擬試験を再開").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("模擬試験を開始").assertDoesNotExist()
     }
@@ -72,8 +76,12 @@ class MockExamResponsiveTest(private val device: TestDevice) {
             MockExamContent(MockExamUiState(exam = exam, currentIndex = 0, remainingMs = 4 * 60_000L), MockExamActions())
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
-        compose.onNodeWithText("残り 4:00（残りわずか）").assertIsDisplayed()
+        compose.assertAccessible(host)
+        compose.onNodeWithText("残り 4:00").assertIsDisplayed()
+        // The warning is announced once (live region); the clock next to it changes every second and is not.
+        compose.onNodeWithText("（残りわずか）").assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        compose.onNodeWithText("残り 4:00").assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.LiveRegion))
         compose.onNodeWithText("見直し解除").performScrollTo().assertIsDisplayed()
         compose.onNodeWithContentDescription("問題38 未回答").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("提出する").performScrollTo().assertIsDisplayed()
@@ -103,7 +111,7 @@ class MockExamResponsiveTest(private val device: TestDevice) {
             MockExamResultContent(MockExamResultUiState(result = result), onStartWeakness = {}, onNavigateHome = {})
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("合格ライン未達").assertIsDisplayed()
         compose.onNodeWithText("間違えた問題を弱点克服で復習").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("問40", substring = true).performScrollTo().assertIsDisplayed()

@@ -72,7 +72,7 @@ Every `*.json` file in that folder is loaded.
 | `lo` | `FL-x.y.z`, must exist in `core/.../model/Syllabus.kt`. |
 | `revision` | Start at 1. Increment whenever the text/answer changes, so installed apps pick up the fix. |
 | `selectCount` | 1 or 2 (see §3). |
-| `scenario` | `null` or text. `\n` for line breaks. Markdown-style tables (`| a | b |` rows, `|---|` separator) are rendered as tables. |
+| `scenario` | `null` or text. `\n` for line breaks. Markdown-style tables (`| a | b |` rows, `|---|` separator) are rendered as tables. **The first row must be a header row followed by the separator**: it is shown in bold and read to screen-reader users as the column names of every other row. |
 | `stem`, `text`, `analysis`, `explanation` | Non-empty, Japanese. |
 | `active` | Optional, default `true`. Set `false` to retire a question without deleting it. |
 

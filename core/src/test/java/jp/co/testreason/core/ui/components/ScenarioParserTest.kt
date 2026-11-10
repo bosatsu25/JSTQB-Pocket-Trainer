@@ -23,6 +23,16 @@ class ScenarioParserTest {
     }
 
     @Test
+    fun tableRows_areDescribedWithTheirColumnHeaders() {
+        val rows = listOf(listOf("金額", "ランク", "割引率"), listOf("0〜9,999", "一般", "0%"), listOf("10,000以上", "ゴールド"))
+
+        assertEquals("表の見出し。金額、ランク、割引率", tableRowDescription(rows, 0))
+        assertEquals("2行目。金額 0〜9,999、ランク 一般、割引率 0%", tableRowDescription(rows, 1))
+        // A missing or empty cell is said, not skipped: the listener must not shift the columns.
+        assertEquals("3行目。金額 10,000以上、ランク ゴールド、割引率 空欄", tableRowDescription(rows, 2))
+    }
+
+    @Test
     fun alignedSeparatorRowIsSkipped() {
         val blocks = parseScenario("| a | b |\n|:--|--:|\n| 1 | 2 |")
         assertEquals(listOf(ScenarioBlock.Table(listOf(listOf("a", "b"), listOf("1", "2")))), blocks)

@@ -56,12 +56,17 @@
 | **Rapid Drill (#32)** | `DrillLapTest` (4), `DrillViewModelTest` (15), `DrillScreensResponsiveTest` (30) | **PASS** | Answer shown on the tap, misses re-queued until the lap is cleared, lap restored from saved state (shown answer, finish time, retired questions dropped); a finished lap leaves attempts / mastery / weak / due / sessions empty; a double tap on "次へ" does not answer the next question; each question starts at the top (mutation-checked). UI not exercised on a device |
 | **Glossary (#4)** | `GlossaryContentValidationTest` (3), `GlossaryViewModelTest` (5), `GlossaryScreensResponsiveTest` (25) | **PASS** | 94 keywords, per-chapter counts 28/17/10/18/25/1, one line ≤ 60 chars, banned terminology; 91/94 keywords mentioned by the question bank (ratchet on the other 3); cards re-queue まだ, double tap cannot grade. 14-char overlap with the syllabus: 3 runs, all bare term enumerations. UI not exercised on a device |
 | **E2E Journeys (#29)** | `AppJourneyTest` (6), `ProcessRecreationTest` (3), `MockExamRepositoryTest.selectChoice…` (2), `MockExamViewModelTest.twoQuickTaps…`, `QuizViewModelTest.selectionAndConfidence_surviveProcessDeath…` | **PASS** | Real Hilt graph, Room and bundled content on Robolectric; 6 consecutive runs green. Mutation checks: the old mock exam selection code fails the quick-tap test; removing the quiz restore fails the recreation journey |
+| **Screen-reader Semantics (#23, partial)** | `assertAccessible` in all `*ResponsiveTest` classes, `ResponsiveHarnessSelfTest` (3 new), `ScenarioParserTest.tableRows…`, `MockExamResponsiveTest` (live region), `QuestionContentValidationTest` (table header rule) | **PASS** | Names and roles on every interactive element on 5 devices; table rows paired with headers; exam warning is a polite live region and the clock is not. Semantics level only: nothing was heard through TalkBack |
 | **Copyright Check (ADR-0006)** | Reviewer pass + 18-char overlap script against the syllabus text (not committed: the syllabus text is copyrighted) | **PASS** | Seven independent reviewers (not the authors) re-checked every key against the syllabus (K3 answers recomputed) and rewrote copied text; 18-char overlap hits went from 178 to 0 across all 8 files. Key changes: none. Wording fixes for ambiguity: c1-016, c2-025, c3-001; explanation fixes: c4-011, c4-016, c5-028 |
 
 ---
 
 ## Execution Log
 
+- `claude/vibrant-maxwell-2sx0ab` (Wave 8.1, issue #23, the part that needs no device):
+  - Every screen test now also checks screen-reader names and roles (`assertAccessible`); no violation was found in the existing screens.
+  - Scenario table rows are read as one sentence with their column headers; the mock exam's low-time warning is announced once.
+  - Still open in #23: TalkBack, Accessibility Scanner and dynamic colour on a device.
 - `claude/vibrant-maxwell-2sx0ab` (Wave 7.4b, issue #29):
   - End-to-end journey tests run the real app on the JVM (`AppJourneyTest`, `ProcessRecreationTest`); policy in `TEST_STRATEGY.md` §4.
   - Defect found by the journeys and fixed: in the mock exam, two quick taps on a two-answer question kept only the second choice (the selection was computed from screen state that lags behind the database). The repository now applies each tap to the saved answer in one transaction.

@@ -80,9 +80,22 @@ class QuestionContentValidationTest {
             .forEach { errors += "$where: choice ${it.id} needs text and analysis" }
         if (lo?.kLevel == KLevel.K3 && q.scenario.isNullOrBlank()) errors += "$where: K3 question needs a scenario"
         if (q.scenario?.isBlank() == true) errors += "$where: scenario must be null or non-blank"
+        if (!q.scenario.orEmpty().tablesHaveHeaderRows()) errors += "$where: every table needs a header row followed by |---|"
         val text = q.allText()
         BANNED_TERMS.filter { text.contains(it) }.forEach { errors += "$where: use syllabus terminology instead of 「$it」" }
         return errors
+    }
+
+    /**
+     * The first row of a table is shown in bold and read to screen-reader users as the column names of every
+     * other row, so it must really be a header: the line after it has to be the Markdown separator.
+     */
+    private fun String.tablesHaveHeaderRows(): Boolean {
+        val lines = lines().map { it.trim() }
+        return lines.indices.all { i ->
+            val startsTable = lines[i].startsWith("|") && (i == 0 || !lines[i - 1].startsWith("|"))
+            !startsTable || lines.getOrNull(i + 1)?.let { TABLE_SEPARATOR.matches(it) } == true
+        }
     }
 
     private fun targetFor(kLevel: KLevel) = if (kLevel == KLevel.K3) K3_TARGET else K1_K2_TARGET
@@ -92,6 +105,7 @@ class QuestionContentValidationTest {
             .joinToString("\n")
 
     private companion object {
+        val TABLE_SEPARATOR = Regex("""^\|?(\s*:?-{2,}:?\s*\|)+\s*:?-*:?\s*\|?$""")
         const val K1_K2_TARGET = 3
         const val K3_TARGET = 6
 

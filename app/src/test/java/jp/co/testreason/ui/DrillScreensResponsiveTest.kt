@@ -48,7 +48,7 @@ class DrillScreensResponsiveTest(private val device: TestDevice) {
             )
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("習熟度・復習予定・弱点には反映しません", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("全範囲から").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("40問").performScrollTo().assertIsDisplayed()
@@ -62,7 +62,7 @@ class DrillScreensResponsiveTest(private val device: TestDevice) {
             DrillContent(uiState = DrillUiState(isLoading = false, lap = lap, question = question), actions = DrillActions())
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("周回モード 0 / 3 クリア").assertIsDisplayed()
         compose.onNodeWithText("分からないので答えを見る").performScrollTo().assertIsDisplayed()
 
@@ -92,7 +92,7 @@ class DrillScreensResponsiveTest(private val device: TestDevice) {
             )
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         // The verdict is text, not only colour.
         compose.onNodeWithText("正解（あなたの解答）").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("あなたの解答（不正解）").performScrollTo().assertIsDisplayed()
@@ -123,7 +123,7 @@ class DrillScreensResponsiveTest(private val device: TestDevice) {
             DrillContent(uiState = DrillUiState(isLoading = false, lap = finished, elapsedMs = 95_000L), actions = DrillActions())
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onNodeWithText("3問中、1回目で正解 2問").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("解答回数 4回 ・ 1分35秒").performScrollTo().assertIsDisplayed()
         listOf("間違えた1問だけもう1周", "同じ問題でもう1周", "章別学習で理由を確認", "ホームへ戻る").forEach {
@@ -137,7 +137,7 @@ class DrillScreensResponsiveTest(private val device: TestDevice) {
             DrillContent(uiState = DrillUiState(isLoading = false), actions = DrillActions())
         }
         compose.assertNoHorizontalOverflow()
-        compose.assertTouchTargetsAtLeast48dp(host)
+        compose.assertAccessible(host)
         compose.onAllNodesWithText("この範囲の問題はまだありません。").onFirst().assertIsDisplayed()
         compose.onNodeWithText("ホームへ戻る").performScrollTo().assertIsDisplayed()
     }

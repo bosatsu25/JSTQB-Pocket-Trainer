@@ -17,6 +17,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,13 +109,36 @@ private fun CodeBlock(text: String) {
     }
 }
 
+/**
+ * What a screen reader says for one table row. A cell on its own ("3%") means nothing without its column, so
+ * each data row is read as one sentence that pairs every value with its header: "2行目。購入金額 0〜9,999、…".
+ * The first row is the header row (Markdown tables always have one).
+ */
+fun tableRowDescription(rows: List<List<String>>, rowIndex: Int): String {
+    fun cell(row: List<String>, column: Int) = row.getOrElse(column) { "" }.ifBlank { EMPTY_CELL }
+    val columnCount = rows.maxOf { it.size }
+    val header = rows.first()
+    return if (rowIndex == 0) {
+        "表の見出し。" + (0 until columnCount).joinToString("、") { cell(header, it) }
+    } else {
+        "${rowIndex + 1}行目。" + (0 until columnCount).joinToString("、") { "${cell(header, it)} ${cell(rows[rowIndex], it)}" }
+    }
+}
+
+private const val EMPTY_CELL = "空欄"
+
 @Composable
 private fun ScenarioTable(rows: List<List<String>>) {
     val columnCount = rows.maxOf { it.size }
     val borderColor = MaterialTheme.colorScheme.outlineVariant
     Column(modifier = Modifier.horizontalScroll(rememberScrollState())) {
         rows.forEachIndexed { rowIndex, row ->
-            Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            // One screen-reader node per row; the cells stay visible but are not read one by one.
+            Row(
+                modifier = Modifier
+                    .height(IntrinsicSize.Min)
+                    .clearAndSetSemantics { contentDescription = tableRowDescription(rows, rowIndex) }
+            ) {
                 for (column in 0 until columnCount) {
                     Text(
                         text = row.getOrElse(column) { "" },
