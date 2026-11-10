@@ -102,6 +102,20 @@ class ProcessRecreationTest {
     }
 
     @Test
+    fun settings_areStillThereAfterTheAppIsKilled() {
+        app.tap("設定")
+        app.tap("20問")
+        app.tap("ライト")
+        compose.waitUntil(TIMEOUT_MS) { runCatching { compose.onNodeWithText("ライト").assertIsSelected() }.isSuccess }
+
+        killAndRestore()
+
+        app.waitFor("1日の目標問題数")
+        compose.onNodeWithText("20問").assertIsSelected()
+        compose.onNodeWithText("ライト").assertIsSelected()
+    }
+
+    @Test
     fun rapidDrill_keepsTheLapAndTheShownAnswer() {
         app.tap("周回モード")
         app.waitFor("全範囲から")
@@ -115,5 +129,9 @@ class ProcessRecreationTest {
         app.waitFor("周回モード 0 / 40 クリア")
         app.waitFor("答えを確認")
         compose.onNodeWithText("次へ").performScrollTo().assertIsDisplayed()
+    }
+
+    private companion object {
+        const val TIMEOUT_MS = 15_000L
     }
 }

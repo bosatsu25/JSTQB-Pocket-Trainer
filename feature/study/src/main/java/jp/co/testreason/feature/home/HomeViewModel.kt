@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jp.co.testreason.core.data.MasteryRepository
 import jp.co.testreason.core.data.QuizRepository
+import jp.co.testreason.core.datastore.UserPreferences
+import jp.co.testreason.core.datastore.UserPreferencesRepository
 import jp.co.testreason.core.model.QuizSession
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,8 +24,13 @@ data class HomeUiState(
     val activeSession: QuizSession? = null,
     val dueReviewCount: Int = 0,
     val weakQuestionCount: Int = 0,
+    /** Questions in the daily session; a setting. */
+    val dailyGoal: Int = UserPreferences.DEFAULT_DAILY_GOAL,
     val isLoading: Boolean = false
 ) {
+    /** About 36 seconds per question: 5 questions are "about 3 minutes". */
+    val dailyMinutes: Int get() = (dailyGoal * 3 + 4) / 5
+
     /** A session can be resumed only if it still has unanswered questions. */
     val resumableSession: QuizSession?
         get() = activeSession?.takeIf { !it.isFinalized && it.currentQuestionIndex < it.questionIds.size }
@@ -36,7 +44,8 @@ sealed interface HomeUiEvent {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val quizRepository: QuizRepository,
-    private val masteryRepository: MasteryRepository
+    private val masteryRepository: MasteryRepository,
+    private val preferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -48,6 +57,11 @@ class HomeViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             quizRepository.syncBundledQuestions()
+        }
+        viewModelScope.launch {
+            preferencesRepository.userPreferences.collect { preferences ->
+                _uiState.update { it.copy(dailyGoal = preferences.dailyGoalQuestions) }
+            }
         }
         viewModelScope.launch {
             masteryRepository.getAllMasteries().collect { masteries ->
@@ -73,7 +87,8 @@ class HomeViewModel @Inject constructor(
     }
 
     fun startDailyQuiz() = startSession(emptyMessage = "出題できる問題がありません。") {
-        quizRepository.createDailySession(DAILY_QUESTION_COUNT)
+        // Read from storage, not from the screen state: the state may not have received the setting yet.
+        quizRepository.createDailySession(preferencesRepository.userPreferences.first().dailyGoalQuestions)
     }
 
     fun startWeaknessReview() = startSession(emptyMessage = "弱点の問題はまだありません。まずは今日のおすすめを解きましょう。") {
@@ -119,7 +134,4 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private companion object {
-        const val DAILY_QUESTION_COUNT = 5
-    }
 }

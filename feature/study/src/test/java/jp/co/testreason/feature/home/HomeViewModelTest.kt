@@ -38,7 +38,7 @@ class HomeViewModelTest {
     @After
     fun tearDown() = env.close()
 
-    private fun viewModel() = HomeViewModel(env.quizRepository, env.masteryRepository)
+    private fun viewModel() = HomeViewModel(env.quizRepository, env.masteryRepository, env.preferences)
 
     @Test
     fun weaknessReview_withNoWeakQuestions_showsAMessageInsteadOfAnEmptySession() = runTest {
@@ -60,6 +60,26 @@ class HomeViewModelTest {
             vm.startWeaknessReview()
             val event = awaitItem() as HomeUiEvent.NavigateToQuiz
             assertEquals(listOf(SampleData.single2.id), env.quizRepository.getSessionById(event.sessionId)!!.questionIds)
+        }
+    }
+
+    @Test
+    fun dailyQuiz_usesTheDailyGoalSetting() = runTest {
+        env.close()
+        env = TestEnvironment(SampleData.examBank()) // enough questions for the larger goals
+        env.start()
+        val vm = viewModel()
+        assertEquals(5, vm.uiState.value.dailyGoal)
+        assertEquals(3, vm.uiState.value.dailyMinutes)
+
+        env.preferences.setDailyGoal(10)
+        val state = vm.uiState.first { it.dailyGoal == 10 }
+        assertEquals(6, state.dailyMinutes)
+
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
+            vm.startDailyQuiz()
+            val event = awaitItem() as HomeUiEvent.NavigateToQuiz
+            assertEquals(10, env.quizRepository.getSessionById(event.sessionId)!!.questionIds.size)
         }
     }
 
@@ -111,7 +131,7 @@ class HomeViewModelTest {
                 return env.quizRepository.createDailySession(count)
             }
         }
-        val vm = HomeViewModel(slow, env.masteryRepository)
+        val vm = HomeViewModel(slow, env.masteryRepository, env.preferences)
 
         vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.startDailyQuiz()

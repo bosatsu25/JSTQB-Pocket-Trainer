@@ -45,6 +45,7 @@ data class HomeActions(
     val onOpenChapters: () -> Unit = {},
     val onOpenDrill: () -> Unit = {},
     val onOpenGlossary: () -> Unit = {},
+    val onOpenSettings: () -> Unit = {},
     val onOpenMockExam: () -> Unit = {},
     val onOpenAnalytics: () -> Unit = {}
 )
@@ -57,6 +58,7 @@ fun HomeScreen(
     onOpenChapters: () -> Unit,
     onOpenDrill: () -> Unit,
     onOpenGlossary: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenMockExam: () -> Unit,
     onOpenAnalytics: () -> Unit,
     modifier: Modifier = Modifier
@@ -84,6 +86,7 @@ fun HomeScreen(
             onOpenChapters = onOpenChapters,
             onOpenDrill = onOpenDrill,
             onOpenGlossary = onOpenGlossary,
+            onOpenSettings = onOpenSettings,
             onOpenMockExam = onOpenMockExam,
             onOpenAnalytics = onOpenAnalytics
         ),
@@ -108,7 +111,7 @@ fun HomeContent(
         ResponsiveScreenColumn(contentPadding = padding) {
             MasteryCard(uiState.averageMastery)
             uiState.resumableSession?.let { ResumeCard(it, enabled = !uiState.isLoading, onResume = actions.onResume) }
-            DailyCard(isLoading = uiState.isLoading, onStart = actions.onStartDaily)
+            DailyCard(uiState, onStart = actions.onStartDaily)
 
             Text("学習メニュー", style = MaterialTheme.typography.titleMedium)
             // Wraps to as many rows as the width needs instead of squeezing the buttons.
@@ -124,6 +127,7 @@ fun HomeContent(
                 QuickAction("用語カード", "1語1行で確認", actions.onOpenGlossary)
                 QuickAction("模擬試験", "40問・60分", actions.onOpenMockExam)
                 QuickAction("学習分析", "学習目的別", actions.onOpenAnalytics)
+                QuickAction("設定", "テーマ・目標問題数", actions.onOpenSettings)
             }
         }
     }
@@ -165,7 +169,8 @@ private fun ResumeCard(session: QuizSession, enabled: Boolean, onResume: () -> U
 }
 
 @Composable
-private fun DailyCard(isLoading: Boolean, onStart: () -> Unit) {
+private fun DailyCard(uiState: HomeUiState, onStart: () -> Unit) {
+    val isLoading = uiState.isLoading
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -175,7 +180,7 @@ private fun DailyCard(isLoading: Boolean, onStart: () -> Unit) {
             Text("今日のおすすめ学習", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "復習期限・弱点・未出題の順に5問（約3分）",
+                text = "復習期限・弱点・未出題の順に${uiState.dailyGoal}問（約${uiState.dailyMinutes}分）",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
