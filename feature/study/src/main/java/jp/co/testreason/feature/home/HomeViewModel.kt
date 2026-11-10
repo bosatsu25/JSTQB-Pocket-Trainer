@@ -81,19 +81,28 @@ class HomeViewModel @Inject constructor(
     }
 
     fun resumeSession() {
-        val session = _uiState.value.resumableSession ?: return
+        val state = _uiState.value
+        val session = state.resumableSession ?: return
+        if (state.isLoading) return
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch { _events.emit(HomeUiEvent.NavigateToQuiz(session.id)) }
     }
 
+    /** Unlocks the start buttons when Home is shown (again); see [startSession]. */
+    fun onScreenShown() = _uiState.update { it.copy(isLoading = false) }
+
     private fun startSession(emptyMessage: String, create: suspend () -> QuizSession?) {
         if (_uiState.value.isLoading) return
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             val session = create()
-            _uiState.update { it.copy(isLoading = false) }
-            _events.emit(
-                if (session != null) HomeUiEvent.NavigateToQuiz(session.id) else HomeUiEvent.ShowMessage(emptyMessage)
-            )
+            if (session != null) {
+                // Stay locked while the app navigates away, so a second tap cannot create another session.
+                _events.emit(HomeUiEvent.NavigateToQuiz(session.id))
+            } else {
+                _uiState.update { it.copy(isLoading = false) }
+                _events.emit(HomeUiEvent.ShowMessage(emptyMessage))
+            }
         }
     }
 

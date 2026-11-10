@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -68,9 +70,31 @@ class HomeViewModelTest {
         }
 
         vm.uiState.first { it.resumableSession?.id == sessionId }
+        vm.onScreenShown() // the learner comes back to Home
         vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
             vm.resumeSession()
             assertEquals(HomeUiEvent.NavigateToQuiz(sessionId), awaitItem())
+        }
+    }
+
+    @Test
+    fun startButtons_stayLockedAfterASessionStarted_untilHomeIsShownAgain() = runTest {
+        val vm = viewModel()
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
+            vm.startDailyQuiz()
+            val first = (awaitItem() as HomeUiEvent.NavigateToQuiz).sessionId
+            assertTrue("locked while navigating away", vm.uiState.value.isLoading)
+
+            vm.startDailyQuiz()
+            vm.startWeaknessReview()
+            vm.resumeSession()
+            expectNoEvents()
+
+            env.clock.now += 1
+            vm.onScreenShown()
+            assertFalse(vm.uiState.value.isLoading)
+            vm.startDailyQuiz()
+            assertNotEquals(first, (awaitItem() as HomeUiEvent.NavigateToQuiz).sessionId)
         }
     }
 }

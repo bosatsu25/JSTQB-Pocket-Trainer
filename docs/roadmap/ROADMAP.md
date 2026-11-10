@@ -78,7 +78,7 @@ Recommended order (epic #1): #27 → #28 → #30 → #29 → #23 → #21 → #24
   - **Status**: TODO
 - **Wave 7.3: Double-tap Guards for Session Start (#28)**
   - **Goal**: Home / result / chapter / analytics / mock-exam start buttons cannot create duplicate sessions.
-  - **Status**: TODO
+  - **Status**: COMPLETED
 - **Wave 7.4: CI Stability (#30) & Navigation E2E Tests (#29)**
   - **Status**: TODO
 - **Wave 8.1: Accessibility & Adaptive Polish**

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -69,6 +70,21 @@ class ResultViewModelTest {
             vm.startRecommendedSession()
             val event = awaitItem() as ResultUiEvent.NavigateToQuiz
             assertEquals(StudyMode.DAILY, env.quizRepository.getSessionById(event.sessionId)!!.mode)
+        }
+    }
+
+    @Test
+    fun recommendedSession_startsOnlyOnce() = runTest {
+        env.answer("s1", SampleData.single1.id, correct = true)
+        env.answer("s1", SampleData.single2.id, correct = true)
+        val vm = viewModel()
+
+        vm.events.test(timeout = REPOSITORY_IO_TIMEOUT) {
+            vm.startRecommendedSession()
+            awaitItem()
+            assertTrue("locked: this screen is leaving the back stack", vm.uiState.value.isStarting)
+            vm.startRecommendedSession()
+            expectNoEvents()
         }
     }
 }

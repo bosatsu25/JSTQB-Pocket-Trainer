@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -64,15 +65,17 @@ class ResultViewModel @Inject constructor(
                 val total = session?.questionIds?.size ?: attempts.size
                 val correct = attempts.count { it.isCorrect }
                 val accuracy = if (total > 0) correct * PERCENT / total else 0
-                _uiState.value = _uiState.value.copy(
-                    session = session,
-                    attempts = attempts,
-                    totalQuestions = total,
-                    correctCount = correct,
-                    accuracyPercentage = accuracy,
-                    summary = summarizeSession(attempts) { objectiveByQuestion[it] },
-                    recommendedAction = if (accuracy >= GOOD_ACCURACY) RecommendedAction.DAILY else RecommendedAction.WEAKNESS
-                )
+                _uiState.update {
+                    it.copy(
+                        session = session,
+                        attempts = attempts,
+                        totalQuestions = total,
+                        correctCount = correct,
+                        accuracyPercentage = accuracy,
+                        summary = summarizeSession(attempts) { id -> objectiveByQuestion[id] },
+                        recommendedAction = if (accuracy >= GOOD_ACCURACY) RecommendedAction.DAILY else RecommendedAction.WEAKNESS
+                    )
+                }
             }
         }
     }
@@ -81,14 +84,18 @@ class ResultViewModel @Inject constructor(
     fun startRecommendedSession() {
         val state = _uiState.value
         if (state.isStarting) return
-        _uiState.value = state.copy(isStarting = true)
+        _uiState.update { it.copy(isStarting = true) }
         viewModelScope.launch {
             val session = when (state.recommendedAction) {
                 RecommendedAction.WEAKNESS -> quizRepository.createWeaknessSession() ?: quizRepository.createDailySession()
                 RecommendedAction.DAILY -> quizRepository.createDailySession()
             }
-            _uiState.value = _uiState.value.copy(isStarting = false)
-            if (session != null) _events.emit(ResultUiEvent.NavigateToQuiz(session.id))
+            if (session != null) {
+                // Stay locked: this screen is removed from the back stack when the next session opens.
+                _events.emit(ResultUiEvent.NavigateToQuiz(session.id))
+            } else {
+                _uiState.update { it.copy(isStarting = false) }
+            }
         }
     }
 

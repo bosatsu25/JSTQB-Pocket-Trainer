@@ -30,7 +30,10 @@ import javax.inject.Singleton
 import kotlin.random.Random
 
 interface MockExamRepository {
-    /** Composes a 40-question exam from the bank per [ExamBlueprint] and starts the clock. */
+    /**
+     * Composes a 40-question exam from the bank per [ExamBlueprint] and starts the clock.
+     * Only one exam can be open: while an exam is unsubmitted, that exam is returned instead of a new one.
+     */
     suspend fun startMockExam(extendedTime: Boolean): MockExamStart
 
     /** The unsubmitted exam to resume, if any. */
@@ -74,12 +77,15 @@ class MockExamRepositoryImpl @Inject constructor(
             is ExamComposition.Incomplete -> MockExamStart.NotEnoughQuestions(composition.missingGroups)
             is ExamComposition.Ready -> {
                 val now = timeProvider.currentTimeMillis()
-                val sessionId = "session_mock_exam_$now"
-                db.withTransaction {
-                    sessionDao.insertOrUpdateSession(
-                        SessionEntity(sessionId, StudyMode.MOCK_EXAM, composition.questions.map { it.id }, 0, now, null, false)
-                    )
-                    examDao.insertExam(MockExamEntity(sessionId, ExamBlueprint.durationMinutes(extendedTime), null))
+                val newId = "session_mock_exam_$now"
+                // Check and insert in one transaction, so two quick taps cannot open two exams.
+                val sessionId = db.withTransaction {
+                    examDao.getUnsubmittedExam()?.sessionId ?: newId.also {
+                        sessionDao.insertOrUpdateSession(
+                            SessionEntity(newId, StudyMode.MOCK_EXAM, composition.questions.map { it.id }, 0, now, null, false)
+                        )
+                        examDao.insertExam(MockExamEntity(newId, ExamBlueprint.durationMinutes(extendedTime), null))
+                    }
                 }
                 MockExamStart.Started(sessionId)
             }

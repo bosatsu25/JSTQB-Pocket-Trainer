@@ -64,6 +64,7 @@ fun MockExamIntroScreen(viewModel: MockExamIntroViewModel, onOpenExam: (String) 
     val uiState by viewModel.uiState.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) {
+        viewModel.onScreenShown()
         viewModel.events.collect { event ->
             when (event) {
                 is MockExamIntroEvent.NavigateToExam -> onOpenExam(event.sessionId)
@@ -111,31 +112,43 @@ fun MockExamIntroContent(
                     )
                 }
             }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .toggleable(value = uiState.extendedTime, role = Role.Switch, onValueChange = onExtendedTimeChange),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("時間延長（${ExamBlueprint.EXTENDED_DURATION_MINUTES}分）", style = MaterialTheme.typography.titleSmall)
-                    Text("日本語を母語としない受験者向けの延長と同じ時間です", style = MaterialTheme.typography.bodySmall)
-                }
-                Switch(checked = uiState.extendedTime, onCheckedChange = null)
-            }
-            uiState.resumableExamId?.let {
-                OutlinedButton(onClick = onResume, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+            if (uiState.resumableExamId != null) {
+                // One exam at a time: an open exam must be submitted before a new one can start.
+                Text(
+                    text = "提出していない模擬試験があります。再開して提出すると、新しい模擬試験を始められます。" +
+                        "制限時間を過ぎている場合は、再開した時点で自動的に提出されます。",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Button(
+                    onClick = onResume,
+                    enabled = !uiState.isStarting,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
                     Text("途中の模擬試験を再開")
                 }
-            }
-            Button(
-                onClick = onStart,
-                enabled = !uiState.isStarting,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("模擬試験を開始")
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .toggleable(value = uiState.extendedTime, role = Role.Switch, onValueChange = onExtendedTimeChange),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("時間延長（${ExamBlueprint.EXTENDED_DURATION_MINUTES}分）", style = MaterialTheme.typography.titleSmall)
+                        Text("日本語を母語としない受験者向けの延長と同じ時間です", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(checked = uiState.extendedTime, onCheckedChange = null)
+                }
+                Button(
+                    onClick = onStart,
+                    enabled = !uiState.isStarting,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("模擬試験を開始")
+                }
             }
         }
     }
@@ -334,6 +347,7 @@ fun MockExamResultScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     LaunchedEffect(Unit) {
+        viewModel.onScreenShown()
         viewModel.events.collect { event ->
             when (event) {
                 is MockExamResultEvent.NavigateToQuiz -> onStartQuiz(event.sessionId)
