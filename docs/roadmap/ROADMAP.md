@@ -64,7 +64,9 @@ Tracking epic: GitHub issue #1 (dependency-ordered checklist of #2–#25).
 ## Milestone M3 — Mock Exam Mode
 - **Wave 7.1: Timed Mock Exam Engine**
   - **Goal**: Implement 40-question timed exam session, navigator, flag for review, and pass/fail scoring.
-  - **Status**: TODO (#19)
+  - **Status**: COMPLETED (#19; blueprint per ISTQB v1.18, see docs/product/EXAM_FORMAT.md)
+- **Wave 7.0: ViewModel Test Coverage (#22)**
+  - **Status**: COMPLETED
 
 ---
 

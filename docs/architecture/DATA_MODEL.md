@@ -2,7 +2,7 @@
 
 ---
 
-Room schema version: **2** (migration 1→2 adds the question columns; see `Migrations.kt`).
+Room schema version: **3** (1→2 adds the question columns, 2→3 adds the mock exam tables; see `Migrations.kt`).
 
 ## 1. Storage Boundaries & Responsibilities
 
@@ -67,3 +67,12 @@ synchronised into Room on start-up by revision (`QuizRepository.syncBundledQuest
 - `lastAttemptAt`: Instant
 - `totalAttempts`: Int
 - `correctAttempts`: Int
+
+### Mock exam (`mock_exams`, `exam_answers`)
+- A mock exam is a `QuizSession` with mode `MOCK_EXAM` (question order, start time) plus a `mock_exams` row
+  (`durationMinutes`, `submittedAt`).
+- `exam_answers` holds provisional answers and review flags; they may change until submission, unlike study attempts.
+- On submission, answered questions are copied to `attempts` (so they update mastery and review schedules);
+  unanswered questions are wrong in the score only. Submission is idempotent.
+- `getActiveSession()` ignores `MOCK_EXAM` sessions; exams are resumed from the mock exam intro screen.
+

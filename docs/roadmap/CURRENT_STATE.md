@@ -4,10 +4,10 @@
 
 ## State Snapshot
 
-- **Current Milestone**: Milestone M2 (Review Intelligence & Study Modes) - IN_PROGRESS
+- **Current Milestone**: Milestone M3 (Mock Exam) - COMPLETED; next: M4 (#21, #23–#25)
 - **Current Branch**: `claude/vibrant-maxwell-2sx0ab`
 - **Tracking**: GitHub epic #1 (issues #2–#25)
-- **Room Schema**: version 2 (non-destructive migration 1→2)
+- **Room Schema**: version 3 (non-destructive migrations 1→2, 2→3)
 - **Question Bank**: 229 questions covering all 64 LOs of syllabus 2023V4.0.J02
 - **Module Architecture**: 5 Modules (`:app`, `:core`, `:feature:study`, `:feature:review`, `:feature:progress`)
 - **Integrity Gate / Build Foundation**: Final Cleanup Completed
@@ -49,12 +49,19 @@
 | **Result Reflection (#20)** | `SessionSummaryTest` | **PASS** | Time, confidence × correctness, strong vs review LOs |
 | **Chapter Study (#17)** | `ChapterSessionTest`, `ChapterOverviewTest` | **PASS** | Chapter-only sessions ordered unseen → weak → oldest |
 | **LO Dashboard (#18)** | `DashboardTest`, `LearningObjectiveSessionTest` | **PASS** | K-level accuracy, mistake breakdown, 64 LO states, LO sessions |
+| **ViewModel Tests (#22)** | 7 ViewModel test classes in feature modules (17 tests) | **PASS** | Real repositories on in-memory Room; found and fixed the due-queue clock spinning on the collector's dispatcher |
+| **Exam Blueprint (#19)** | `ExamBlueprintTest`, `ExamComposerTest` | **PASS** | 40 questions, K1/K2/K3 = 8/24/8, chapters 8/6/4/11/9/2, 29 LO groups covering all 64 LOs (ISTQB v1.18); bundled bank supports 3 exams without repeats |
+| **Mock Exam Flow (#19)** | `MockExamRepositoryTest` (6), `MockExamViewModelTest` (6), `MigrationTest.migrate2To3…`, `MockExamResponsiveTest` (20) | **PASS** | Answers changeable until submit, deadline enforced, auto-submit and post-restart submit, 25 = fail / 26 = pass, only answered questions recorded |
 | **Copyright Check (ADR-0006)** | Reviewer pass + 18-char overlap script against the syllabus text (not committed: the syllabus text is copyrighted) | **PASS** | Seven independent reviewers (not the authors) re-checked every key against the syllabus (K3 answers recomputed) and rewrote copied text; 18-char overlap hits went from 178 to 0 across all 8 files. Key changes: none. Wording fixes for ambiguity: c1-016, c2-025, c3-001; explanation fixes: c4-011, c4-016, c5-028 |
 
 ---
 
 ## Execution Log
 
+- `claude/vibrant-maxwell-2sx0ab` (Waves 7.0 / 7.1, issues #22, #19):
+  - Exam format researched from JSTQB exam guide, ISTQB Exam Structure and Rules Tables v1.18 and Pearson VUE (`docs/product/EXAM_FORMAT.md`); the published FL syllabus is still 2023V4.0.J02.
+  - ViewModel tests for every screen; repository clock moved off the main dispatcher.
+  - Mock exam: blueprint composer, Room v3 tables, timed exam with navigator/flags, auto-submit, results by chapter and K-level.
 - `claude/vibrant-maxwell-2sx0ab` (Waves 5.2 / 6.1 / 6.2, issues #17, #18, #20 + responsive tests):
   - Responsive Compose UI test harness on Robolectric (NATIVE graphics) over 5 device configurations; fixed chip touch targets (~36×35dp → 48dp), wrapping menus/chips, width cap, two-pane quiz/explanation.
   - Result reflection card; confidence "not selected" rule aligned between SCREEN_SPEC and LEARNING_LOOP.

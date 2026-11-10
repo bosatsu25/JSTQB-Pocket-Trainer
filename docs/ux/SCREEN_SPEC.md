@@ -14,7 +14,7 @@
    - 弱点克服 (weak count) → starts a weakness session, or a message when there is none
    - 章別学習 → Chapter Select screen
    - 学習分析 → learning analytics
-   - Mock Exam (#19) is added when implemented; no placeholder buttons.
+   - 模擬試験 → Mock Exam intro
    - The menu wraps (FlowRow) on narrow screens or large fonts.
 
 ---
@@ -82,4 +82,20 @@
 2. **Mistake reasons**: count per tag, plus untagged misses (shown only when there are misses).
 3. **Chapter cards**: mastery bar (with text), answered LOs / total, and every LO as a ≥ 48dp row with its
    state in text (未着手 / 弱点 / 学習中 / 習熟) and score. Tapping a row with questions starts an LO session.
+
+---
+
+## 6. Mock Exam (`MockExamIntroScreen` → `MockExamScreen` → `MockExamResultScreen`)
+Format and sources: `docs/product/EXAM_FORMAT.md` (ISTQB Exam Structure and Rules Tables v1.18, JSTQB exam guide).
+
+1. **Intro**: rules (40 questions, 60 minutes, pass at 26 = 65%, official K/chapter distribution, no explanations
+   until submission), optional 75-minute extended time, resume button for an unsubmitted exam, start button.
+2. **Exam**: remaining time in the top bar (with a text warning under 5 minutes), question and choices (radio /
+   checkbox), review flag, previous / next, a 40-cell navigator whose cells state answered (✓) and flagged (?) in
+   text and in their content description, and a submit button with a confirmation dialog that states the number of
+   unanswered questions. Two panes from 720dp (question | navigator).
+   Time up submits automatically; reopening after the deadline submits immediately.
+3. **Result**: pass-line reached / not reached, score vs pass line, unanswered count, scores by chapter and by
+   K-level, a CTA to start a weakness session with the wrong answers, and every question with its verdict;
+   tapping a row shows the stem, the correct vs given answer and the explanation.
 
