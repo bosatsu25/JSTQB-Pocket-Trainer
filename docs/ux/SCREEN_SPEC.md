@@ -14,6 +14,7 @@
    - 弱点克服 (weak count) → starts a weakness session, or a message when there is none
    - 章別学習 → Chapter Select screen
    - 周回モード → Rapid Drill setup (§8)
+   - 用語カード → Glossary (§9)
    - 学習分析 → learning analytics
    - 模擬試験 → Mock Exam intro
    - The menu wraps (FlowRow) on narrow screens or large fonts.
@@ -139,3 +140,25 @@ correctly, and only then dig into the reasons. Behaviour rules are in `LEARNING_
 ### Lap summary
 - 1周クリア: first-try correct count, number of answers, elapsed time, seconds per answer.
 - Actions: "間違えたN問だけもう1周" (only when something was missed), "同じ問題でもう1周", "章別学習で理由を確認", "ホームへ戻る".
+
+---
+
+## 9. Glossary (`GlossaryScreen` → `GlossaryCardsScreen`) — 用語ひとこと / 用語カード (#4)
+The 94 keywords listed at the top of the six syllabus chapters, each with a one-line summary written for this
+app (ADR-0006: not the syllabus or glossary wording).
+
+### List
+- A note says the summaries are this app's own and that the exact definitions are in the syllabus and glossary.
+- Chapter filter chips with counts: 全章 / 第1章 … 第6章. A keyword listed in two chapters appears in both.
+- "カードで確認する（N語）" opens the cards for the selected scope (disabled when the scope is empty).
+- Rows: term and its one-line summary (one screen-reader node per row).
+
+### Cards
+1. **Top Bar**: "用語カード x / y" (terms marked 覚えた in this lap).
+2. **Card**: chapter(s), the term, and a prompt to recall the meaning. "意味を見る" turns the card.
+3. **After turning**: the summary, then **"まだ"** and **"覚えた"**. A term marked まだ comes back at the end of
+   the lap; the lap ends when every term is marked 覚えた. Taps on まだ / 覚えた within 400 ms after turning are
+   ignored (they replace "意味を見る" in the same place). The next card starts face down and at the top.
+4. **Lap summary**: first-try count; "「まだ」のN語だけもう1周", "同じ語でもう1周", "用語一覧へ戻る", "ホームへ戻る".
+
+Nothing is recorded (same rule as the rapid drill). The lap is kept in `SavedStateHandle`.

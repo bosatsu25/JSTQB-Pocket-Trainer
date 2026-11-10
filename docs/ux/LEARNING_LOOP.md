@@ -99,6 +99,11 @@ explanation screen.
   not be forgotten and retried as a first try) and the time of a finished lap (time away after finishing is not
   added). A question retired by a content update is dropped from a restored lap.
 
+## Glossary Cards (用語カード)
+Self-graded flash cards over the syllabus keywords: recall, turn the card, mark 覚えた or まだ. It uses the same
+lap rule as the rapid drill (まだ → back to the end of the lap) and, like the drill, records nothing: the grade is
+the learner's own judgement, not evidence of a correct answer.
+
 ## Learning Objective States (Analytics)
 | State | Rule |
 |---|---|

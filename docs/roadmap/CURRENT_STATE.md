@@ -8,7 +8,7 @@
 - **Current Branch**: `claude/vibrant-maxwell-2sx0ab`
 - **Tracking**: GitHub epic #1 (issues #2–#32)
 - **Room Schema**: version 3 (non-destructive migrations 1→2, 2→3)
-- **Question Bank**: 229 questions covering all 64 LOs of syllabus 2023V4.0.J02
+- **Question Bank**: 229 questions covering all 64 LOs of syllabus 2023V4.0.J02; glossary of all 94 chapter keywords
 - **Module Architecture**: 5 Modules (`:app`, `:core`, `:feature:study`, `:feature:review`, `:feature:progress`)
 - **Integrity Gate / Build Foundation**: Final Cleanup Completed
 - **Known Blockers**: None for this wave. Device / emulator E2E is still not run (no AVD in CI/container).
@@ -54,12 +54,16 @@
 | **Mock Exam Flow (#19)** | `MockExamRepositoryTest` (6), `MockExamViewModelTest` (6), `MigrationTest.migrate2To3…`, `MockExamResponsiveTest` (20) | **PASS** | Answers changeable until submit, deadline enforced, auto-submit and post-restart submit, 25 = fail / 26 = pass, only answered questions recorded |
 | **Session Start Guards (#28)** | Home / Result / ChapterSelect / Analytics / Review / MockExam ViewModel tests, `MockExamRepositoryTest.onlyOneExamCanBeOpen…`, `MockExamResponsiveTest.introWithAnOpenExam…` | **PASS** | Second tap ignored until the screen is shown again; one open mock exam at a time. Mutation check: removing the lock in Home and ChapterSelect makes their tests fail |
 | **Rapid Drill (#32)** | `DrillLapTest` (4), `DrillViewModelTest` (15), `DrillScreensResponsiveTest` (30) | **PASS** | Answer shown on the tap, misses re-queued until the lap is cleared, lap restored from saved state (shown answer, finish time, retired questions dropped); a finished lap leaves attempts / mastery / weak / due / sessions empty; a double tap on "次へ" does not answer the next question; each question starts at the top (mutation-checked). UI not exercised on a device |
+| **Glossary (#4)** | `GlossaryContentValidationTest` (3), `GlossaryViewModelTest` (5), `GlossaryScreensResponsiveTest` (25) | **PASS** | 94 keywords, per-chapter counts 28/17/10/18/25/1, one line ≤ 60 chars, banned terminology; 91/94 keywords mentioned by the question bank (ratchet on the other 3); cards re-queue まだ, double tap cannot grade. 14-char overlap with the syllabus: 3 runs, all bare term enumerations. UI not exercised on a device |
 | **Copyright Check (ADR-0006)** | Reviewer pass + 18-char overlap script against the syllabus text (not committed: the syllabus text is copyrighted) | **PASS** | Seven independent reviewers (not the authors) re-checked every key against the syllabus (K3 answers recomputed) and rewrote copied text; 18-char overlap hits went from 178 to 0 across all 8 files. Key changes: none. Wording fixes for ambiguity: c1-016, c2-025, c3-001; explanation fixes: c4-011, c4-016, c5-028 |
 
 ---
 
 ## Execution Log
 
+- `claude/vibrant-maxwell-2sx0ab` (Wave 8.3, issue #4):
+  - Glossary: 94 syllabus keywords with one-line summaries in our own words (authored, then independently reviewed against the syllabus: 50 summaries rewritten, keyword lists matched per chapter).
+  - Glossary list with chapter filter, flash cards with the drill's lap rule, keyword coverage report (3 keywords are in no question text).
 - `claude/vibrant-maxwell-2sx0ab` (Wave 7.5, issue #32):
   - Rapid drill (周回モード): setup by scope, answer revealed on the tap, missed questions re-queued until the lap is cleared, lap summary with pace.
   - Drill answers are deliberately not recorded (no attempt / mastery / review / session); reason in `LEARNING_LOOP.md`.
